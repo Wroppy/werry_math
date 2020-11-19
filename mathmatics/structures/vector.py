@@ -1,19 +1,19 @@
+from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from mathmatics.exceptions.vector import VectorIndexOutOfBounds, VectorInterfaceInstance
+from mathmatics.exceptions.vector import VectorIndexOutOfBounds
 
 
-class Vector:
-    symbols = ["x", "y", "z"]
+class Vector(ABC):
+    symbols = ["x", "y", "z", "w"]
 
-    def __init__(self, error=True):
-        if error:
-            raise VectorInterfaceInstance("cannot instance an interface")
+    @abstractmethod
+    def __getitem__(self, location: int):
+        pass
 
 
 class VectorND(Vector):
     def __init__(self, *values: float):
-        super().__init__(error=False)
         self.values = [*values]
 
     @staticmethod
@@ -28,7 +28,7 @@ class VectorND(Vector):
         try:
             return self.values[location]
         except IndexError:
-            raise VectorIndexOutOfBounds("Index out of bounds")
+            raise VectorIndexOutOfBounds("index out of bounds")
 
     def x(self):
         try:
@@ -62,7 +62,6 @@ class VectorND(Vector):
 
 class Vector2D(Vector):
     def __init__(self, x: float, y: float):
-        super().__init__(error=False)
         self.x = x
         self.y = y
 
@@ -70,7 +69,7 @@ class Vector2D(Vector):
         try:
             return [self.x, self.y][location]
         except IndexError:
-            raise VectorIndexOutOfBounds("Index out of bounds")
+            raise VectorIndexOutOfBounds("index out of bounds")
 
     def __str__(self):
         return f"Vector x: {self.x}, y: {self.y}"

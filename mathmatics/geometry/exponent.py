@@ -1,7 +1,7 @@
 from typing import Tuple, List
 
-from mathmatics.equations.common import ExponentialEquation
-from mathmatics.structures.equation import NotEnoughArguments
+from mathmatics.exceptions.equation import NotEnoughArguments
+from mathmatics.geometry.equation import ExponentialEquation
 
 
 def table_to_exponent(table: List[Tuple[float, float]], asymptote: float = 0) -> ExponentialEquation:
@@ -20,4 +20,4 @@ def table_to_exponent(table: List[Tuple[float, float]], asymptote: float = 0) ->
 
 if __name__ == '__main__':
     eq = ExponentialEquation(125, 1.2)
-    print(eq.y(3))
+    eq.print_y(2)
