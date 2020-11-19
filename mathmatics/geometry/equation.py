@@ -31,3 +31,19 @@ class QuadraticEquation(Equation):
     def __str__(self):
         return f"y = {self.a}*x^2+{self.b}*x+{self.c}"
 
+
+class LinearEquation(Equation):
+    def __init__(self, m: float, c: float):
+        self.m = m
+        self.c = c
+
+    def y(self, x: float) -> float:
+        return self.m * x + self.c
+
+    def __str__(self):
+        return f"y = {self.m}*x+{self.c}"
+
+
+if __name__ == '__main__':
+    eq = ExponentialEquation(0.5, 2)
+    eq.graph()
