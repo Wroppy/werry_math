@@ -1,0 +1,2 @@
+class VectorIndexOutOfBounds(Exception):
+    pass
