@@ -1,0 +1,2 @@
+class NotEnoughArguments(Exception):
+    pass
