@@ -1,12 +1,12 @@
 from typing import Tuple, List
 
-from mathmatics.exceptions.equation import NotEnoughArguments
+from mathmatics.exceptions.common import EquationNotEnoughArguments
 from mathmatics.geometry.equation import ExponentialEquation
 
 
 def table_to_exponent(table: List[Tuple[float, float]], asymptote: float = 0) -> ExponentialEquation:
     if len(table) < 2:
-        raise NotEnoughArguments
+        raise EquationNotEnoughArguments
 
     y1 = table[0][1]
     y2 = table[1][1]

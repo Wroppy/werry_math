@@ -1,9 +1,10 @@
-from mathmatics.equations.common import Equation
 from mathmatics.geometry.quadratic import solve_quadratic
+from mathmatics.structures.equation import Equation
 from mathmatics.structures.vector import Vector2D
 
 
 class ExponentialEquation(Equation):
+
     def __init__(self, a: float, b: float, c: float = 0):
         self.a = a
         self.b = b
@@ -45,5 +46,5 @@ class LinearEquation(Equation):
 
 
 if __name__ == '__main__':
-    eq = ExponentialEquation(0.5, 2)
-    eq.graph()
+    eq = ExponentialEquation(1, 15)
+    eq.open_in_desmos()

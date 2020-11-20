@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Desmos</title>
+    <style>
+        html, body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<div id="calculator" style="width: 100vw; height: 100vh"></div>
+
+<script src="https://www.desmos.com/api/v1.5/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+<script>
+    try {
+        e;
+    } catch {
+        alert("this is a template file, not for opening manually");
+    }
+    var cref = document.getElementById('calculator');
+    var calculator = Desmos.GraphingCalculator(cref);
+    if (e !== null) {
+        calculator.setExpression({id: 'graph1', latex: e.toString()});
+    }
+</script>
+</body>
+</html>

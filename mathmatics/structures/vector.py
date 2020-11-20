@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from mathmatics.exceptions.vector import VectorIndexOutOfBounds
+from mathmatics.exceptions.common import VectorIndexOutOfBounds
+from mathmatics.structures.common import MathObject
 
 
-class Vector(ABC):
+class Vector(MathObject, ABC):
     """
     Generic vector class
     """
@@ -65,6 +66,15 @@ class VectorND(Vector):
         except IndexError:
             raise VectorIndexOutOfBounds("z out of bounds")
 
+    def to_latex(self) -> str:
+        result = "["
+        for index, value in enumerate(self.values):
+
+            result += str(value)
+            if index != len(self.values) - 1:
+                result += ", "
+        return result + "]"
+
     def __str__(self):
         result = "Vector "
         for index, value in enumerate(self.values):
@@ -94,10 +104,13 @@ class Vector2D(Vector):
     def size(self) -> int:
         return 2
 
+    def to_latex(self) -> str:
+        return f"[{self.x}, {self.y}]"
+
     def __str__(self):
         return f"Vector x: {self.x}, y: {self.y}"
 
 
 if __name__ == '__main__':
     vect = VectorND.from_tuple((1, 2, 3, 5))
-    print(vect)
+    print(vect.open_in_desmos())
