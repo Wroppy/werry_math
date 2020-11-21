@@ -76,5 +76,6 @@ class CustomEquation(Equation):
 
 
 if __name__ == '__main__':
-    eq = CustomEquation(lambda x: 0.5 * x ** 2, "y=x^2")
-    eq.open_in_desmos()
+    eq = CustomEquation(lambda x: 0.5 * x ** 2, "y=x^3")
+    eq.graph()
+
