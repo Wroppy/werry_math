@@ -4,3 +4,7 @@ class EquationNotEnoughArguments(Exception):
 
 class VectorIndexOutOfBounds(Exception):
     pass
+
+
+class DerivativeNegativeDegree(Exception):
+    pass

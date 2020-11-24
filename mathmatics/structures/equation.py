@@ -4,6 +4,8 @@ from typing import Callable, Union
 import matplotlib.pyplot as plt
 import numpy as np
 
+from mathmatics.calculus.integral import integral
+from mathmatics.calculus.derivative import derivative
 from mathmatics.structures.common import MathObject
 
 
@@ -21,6 +23,12 @@ class Equation(MathObject, ABC):
         :return: The y value
         """
         pass
+
+    def derivative(self, x: float) -> float:
+        return derivative(self.y, x)
+
+    def integral(self, start: float, end: float) -> float:
+        return integral(self.y, start, end)
 
     def to_latex(self) -> Union[str, None]:
         return str(self)
