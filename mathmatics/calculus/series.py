@@ -1,8 +1,8 @@
 import math
 from typing import Callable
 
-from mathmatics.calculus.common import sigma
-from mathmatics.calculus.derivative import derivative_fn
+from mathmatics.calculus.common import sigma as __sigma
+from mathmatics.calculus.derivative import derivative_fn as __derivative_fn
 
 __two_pi = 2 * math.pi
 
@@ -76,7 +76,7 @@ def taylor_series(fn: Callable, x: float, a: float, precision: int = 7) -> float
     :param precision: Degree of polynomial
     :return: Evaluated taylor series
     """
-    return sigma(lambda n: derivative_fn(fn, degree=n)(a) * ((x - a) ** n / math.factorial(n)), 0, precision)
+    return __sigma(lambda n: __derivative_fn(fn, degree=n)(a) * ((x - a) ** n / math.factorial(n)), 0, precision)
 
 
 def taylor_series_fn(fn: Callable, a: float, precision: int = 7) -> Callable:
