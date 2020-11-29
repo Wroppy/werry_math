@@ -161,11 +161,14 @@ class Display(QMainWindow):
 
 
 if __name__ == '__main__':
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+
     app = QApplication(sys.argv)
 
     display = Display()
     display.show()
-
+    
+    app.setAttribute(Qt.AA_EnableHighDpiScaling)
     app.setStyle("Fusion")
 
     font = ResourceManager.load_font("roboto/Roboto-Regular.ttf")
