@@ -1,10 +1,10 @@
 import math
 from typing import Callable
 
-from mathmatics.calculus.common import sigma
-from mathmatics.calculus.derivative import derivative_fn
+from mathmatics.calculus.common import sigma as __sigma
+from mathmatics.calculus.derivative import derivative_fn as __derivative_fn
 
-two_pi = 2 * math.pi
+__two_pi = 2 * math.pi
 
 
 def taylor_sin(x: float, precision: int = 7) -> float:
@@ -17,11 +17,11 @@ def taylor_sin(x: float, precision: int = 7) -> float:
     :return: Sin of X
     """
     sign = 1
-    while x > two_pi:
-        x -= two_pi
+    while x > __two_pi:
+        x -= __two_pi
 
     while x < 0:
-        x += two_pi
+        x += __two_pi
 
     if x > math.pi:
         x -= math.pi
@@ -46,11 +46,11 @@ def taylor_cos(x: float, precision: int = 7) -> float:
     :return: Sin of X
     """
     sign = 1
-    while x > two_pi:
-        x -= two_pi
+    while x > __two_pi:
+        x -= __two_pi
 
     while x < 0:
-        x += two_pi
+        x += __two_pi
 
     if x > math.pi:
         x -= math.pi
@@ -76,7 +76,7 @@ def taylor_series(fn: Callable, x: float, a: float, precision: int = 7) -> float
     :param precision: Degree of polynomial
     :return: Evaluated taylor series
     """
-    return sigma(lambda n: derivative_fn(fn, degree=n)(a) * ((x - a) ** n / math.factorial(n)), 0, precision)
+    return __sigma(lambda n: __derivative_fn(fn, degree=n)(a) * ((x - a) ** n / math.factorial(n)), 0, precision)
 
 
 def taylor_series_fn(fn: Callable, a: float, precision: int = 7) -> Callable:
@@ -93,12 +93,12 @@ def taylor_series_fn(fn: Callable, a: float, precision: int = 7) -> Callable:
 
 
 if __name__ == '__main__':
-    at = 1.77 * two_pi
-    print(taylor_sin(1.77 * two_pi))
-    print(math.sin(1.77 * two_pi))
+    at = 1.77 * __two_pi
+    print(taylor_sin(1.77 * __two_pi))
+    print(math.sin(1.77 * __two_pi))
 
-    print(taylor_cos(1.77 * two_pi))
-    print(math.cos(1.77 * two_pi))
+    print(taylor_cos(1.77 * __two_pi))
+    print(math.cos(1.77 * __two_pi))
 
     print(taylor_series(math.cos, at, at - 0.5))
     print(math.cos(at))
