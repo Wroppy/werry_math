@@ -2,15 +2,41 @@ import code
 import inspect
 import os
 from abc import ABC, abstractmethod
-from typing import List, Union, Any, Callable
+from types import ModuleType
+from typing import List, Union, Any, Callable, Dict, Optional
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import sys
+import importlib.util
 
 cdir = os.path.dirname(os.path.realpath(__file__))
+
+
+def type_to_str(obj: Any):
+    if isinstance(obj, bool):
+        return "bool"
+    elif isinstance(obj, int):
+        return "int"
+    elif isinstance(obj, str):
+        return "str"
+    elif isinstance(obj, float):
+        return "float"
+    elif obj is None:
+        return "none"
+    elif isinstance(obj, list):
+        return "list"
+    elif isinstance(obj, tuple):
+        return "tuple"
+    elif isinstance(obj, dict):
+        return "dict"
+    elif isinstance(obj, set):
+        return "set"
+    elif isinstance(obj, Callable):
+        return "fn"
+    return str(type(obj))
 
 
 class CustomStandardItem(QStandardItem):
@@ -25,6 +51,30 @@ class CustomFilterModel(QSortFilterProxyModel):
         super().__init__(*args, **kwargs)
         self.setRecursiveFilteringEnabled(True)
         self.setFilterCaseSensitivity(Qt.CaseInsensitive)
+
+
+class CustomTableModel(QAbstractTableModel):
+    def __init__(self, header: List[Any], data: List[List[Any]]):
+        super(CustomTableModel, self).__init__()
+        self.data = data
+        self.header = header
+
+    def data(self, index: QModelIndex, role: int = ...) -> Any:
+        if role == Qt.DisplayRole:
+            return self.data[index.row()][index.column()]
+
+    def rowCount(self, parent: QModelIndex = ...) -> int:
+        return len(self.data)
+
+    def columnCount(self, parent: QModelIndex = ...) -> int:
+        return len(self.data[0])
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> Any:
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Horizontal:
+                return str(self.header[section])
+            else:
+                return super(CustomTableModel, self).headerData(section, orientation, role)
 
 
 class TreeNode(ABC):
@@ -43,26 +93,135 @@ class TreeNode(ABC):
     def to_model(self) -> CustomStandardItem:
         pass
 
+    def to_display_str(self) -> str:
+        return self.name
 
-# Do more than just functions thou
-class Function(TreeNode):
-    def __init__(self, parent: TreeNode, name: str, fn: Callable):
-        self.parent = parent
-        self.name = name
-        self.fn = fn
-        self.path = os.path.join(parent.path, name)
 
-    def parse(self):
-        pass
-
-    def to_model(self) -> CustomStandardItem:
-        item = CustomStandardItem(self, self.name)
-        return item
+class Variable(TreeNode, ABC):
+    doc: str
 
     def to_import_path(self) -> str:
         return ".".join(
             os.path.join(self.parent.path[:-len(ModuleTree.file_extension)], self.name)[len(cdir) + 1:].split(
                 os.path.sep))
+
+    def to_console_str(self) -> str:
+        return self.name
+
+
+class Function(Variable):
+    def __init__(self, parent: TreeNode, name: str, fn: Any, method: bool = False):
+        self.parent = parent
+
+        self.path = os.path.join(parent.path, name)
+        self.name = name
+
+        args = []
+        ret = ""
+        for anno in fn.__annotations__:
+            value = fn.__annotations__[anno]
+            if anno == 'return':
+                ret = type_to_str(value)
+            else:
+                args.append(f"{anno}: {type_to_str(value)}")
+        args = " ".join(args)
+        doc = fn.__doc__
+
+        self.args = args
+        self.ret = ret
+        if doc is None:
+            self.doc = "No Doc Available"
+        else:
+            self.doc = '\n'.join(filter(lambda x: len(x) != 0, [line.strip() for line in doc.split('\n')]))
+        self.method = method
+
+    def parse(self):
+        pass
+
+    def to_model(self) -> CustomStandardItem:
+        if len(self.ret) == 0:
+            to_str = f"FN {self.name}({self.args})"
+        else:
+            to_str = f"FN {self.name}({self.args})->{self.ret}"
+        item = CustomStandardItem(self, to_str)
+        item.setToolTip(self.doc)
+        return item
+
+    def to_console_str(self) -> str:
+        if not self.method:
+            return super(Function, self).to_console_str()
+        return f"{self.parent.to_console_str()}.{self.name}"
+
+    @staticmethod
+    def match(parent: 'Module', name: str, path: str) -> List['Function']:
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        methods = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isfunction)))
+
+        results = []
+        for fn_name, fn_callable in methods:
+            if fn_callable.__module__ not in parent.to_import_prefix_str():
+                continue
+            results.append(Function(parent, fn_name, fn_callable))
+        return results
+
+
+class Class(Variable):
+    nodes: List[Function]
+    parent: 'Module'
+
+    def __init__(self, parent: 'Module', name: str, cls: Any):
+        self.path = os.path.join(parent.path, name)
+        self.parent = parent
+        self.name = name
+
+        self.cls = cls
+
+        doc = cls.__doc__
+        if doc is None:
+            self.doc = "No Doc Available"
+        else:
+            self.doc = '\n'.join(filter(lambda x: len(x) != 0, [line.strip() for line in doc.split('\n')]))
+
+        self.constructor = None
+        self.nodes = []
+
+    def parse(self):
+        result = inspect.getmembers(self.cls, predicate=inspect.isfunction)
+
+        for fn_name, fn in result:
+            if fn.__module__ not in self.parent.to_import_prefix_str():
+                continue
+
+            function = Function(self, fn_name, fn, method=True)
+            if fn_name == "__init__":
+                self.constructor = function
+            self.nodes.append(function)
+
+    def to_model(self) -> CustomStandardItem:
+        item = CustomStandardItem(self, f"CLS {self.name}")
+        item.setToolTip(self.doc)
+        for node in self.nodes:
+            item.appendRow(node.to_model())
+        return item
+
+    @staticmethod
+    def match(parent: 'Module', name: str, path: str) -> List['Class']:
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        classes = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isclass)))
+
+        results = []
+        for cls_nam, cls in classes:
+            if cls.__module__ not in parent.to_import_prefix_str():
+                continue
+            cls = Class(parent, cls_nam, cls)
+            cls.parse()
+            results.append(cls)
+
+        return results
 
 
 class Module(TreeNode):
@@ -75,21 +234,39 @@ class Module(TreeNode):
         self.path = os.path.join(parent.path, name)
 
     def parse(self):
-        import importlib.util
         name = self.name[:-len(ModuleTree.file_extension)]
-        spec = importlib.util.spec_from_file_location(name, self.path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        methods = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isfunction)))
-        for fn_name, fn_callable in methods:
-            fn = Function(self, fn_name, fn_callable)
-            self.nodes.append(fn)
+        functions = Function.match(self, name, self.path)
+        self.nodes.extend(functions)
+        classes = Class.match(self, name, self.path)
+        self.nodes.extend(classes)
+        # with open(self.path, "r") as f:
+        #     content = str(f.readlines())
+        #     Function.match(content)
+        # for line in f.readlines():
+        #     if "def" in line and Function.match(line[:-2]):
+        #         line = line[:-2]
+        #         fn = Function(self, line)
+        #         self.nodes.append(fn)
+        # import importlib.util
+        # name = self.name[:-len(ModuleTree.file_extension)]
+        # spec = importlib.util.spec_from_file_location(name, self.path)
+        # module = importlib.util.module_from_spec(spec)
+        # spec.loader.exec_module(module)
+        # methods = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isfunction)))
+        # for fn_name, fn_callable in methods:
+        #     fn = Function(self, fn_name, fn_callable)
+        #     self.nodes.append(fn)
 
     def to_model(self) -> CustomStandardItem:
-        item = CustomStandardItem(self, self.name)
+        item = CustomStandardItem(self, self.to_display_str())
         for node in self.nodes:
             item.appendRow(node.to_model())
         return item
+
+    def to_import_prefix_str(self) -> str:
+        return ".".join(
+            os.path.join(self.path[:-len(ModuleTree.file_extension)])[len(cdir) + 1:].split(
+                os.path.sep))
 
 
 class Package(TreeNode):
@@ -121,7 +298,7 @@ class Package(TreeNode):
                 self.nodes.append(package)
 
     def to_model(self) -> CustomStandardItem:
-        item = CustomStandardItem(self, self.name)
+        item = CustomStandardItem(self, self.to_display_str())
         for node in self.nodes:
             item.appendRow(node.to_model())
         return item
@@ -162,17 +339,21 @@ class ModuleTree(TreeNode):
 # QTextEdit but better
 class TerminalEmulator(QTextEdit):
     prompt: str = ">> "
+    clearCommand: str = "clear"
+    selectionWhiteListKeys: List[Qt.Key] = [Qt.Key_Left, Qt.Key_Right]
 
     history: List[str]
-    current_index: int
+    currentIndex: int
 
     interpreter: code.InteractiveInterpreter
+
+    localsUpdated: pyqtSignal = pyqtSignal(object)
 
     def __init__(self, *args, **kwargs):
         super(QTextEdit, self).__init__(*args, **kwargs)
 
         self.history = []
-        self.current_index = 0
+        self.currentIndex = 0
 
         self.interpreter = code.InteractiveInterpreter()
 
@@ -200,17 +381,19 @@ class TerminalEmulator(QTextEdit):
     def importModule(self, module: str):
         self.executeCommand(f"from {module} import *")
 
-    def writeFunction(self, fn: Function):
-        import_path = fn.to_import_path()
+    def writeFunction(self, var: Variable):
+        import_path = var.to_import_path()
         root = import_path.split('.')[0]
-        if fn.name not in self.interpreter.locals:
-            if root not in self.interpreter.locals:
-                self.importModule(root)
-            else:
-                self.appendCurrentLine(f"{import_path}")
-                self.setFocus()
-                return
-        self.appendCurrentLine(fn.name)
+        if isinstance(var, Class) or (isinstance(var, Function) and not var.method):
+            if var.name not in self.interpreter.locals:
+                if root not in self.interpreter.locals:
+                    self.importModule(root)
+                else:
+                    self.appendCurrentLine(f"{import_path}")
+                    self.setFocus()
+                    return
+
+        self.appendCurrentLine(var.to_console_str())
         self.setFocus()
 
     def executeCommand(self, command: str):
@@ -221,6 +404,12 @@ class TerminalEmulator(QTextEdit):
 
     def appendCurrentLine(self, text: str):
         self.setText(self.toPlainText() + text)
+        self.moveCursor(QtGui.QTextCursor.End)
+
+    def setRawCurrentLine(self, text: str):
+        before = self.toPlainText().split('\n')[:-1]
+        before.append(f"{text}")
+        self.setText("\n".join(before))
         self.moveCursor(QtGui.QTextCursor.End)
 
     def setCurrentLine(self, text: str):
@@ -236,24 +425,27 @@ class TerminalEmulator(QTextEdit):
         self.insertPlainText('\n'.join(lines))
         self.moveCursor(QtGui.QTextCursor.End)
 
+    def appendText(self, text: str):
+        self.insertPlainText(text)
+
     def appendHistory(self, command: str):
-        if self.current_index != len(self.history):
-            self.history.pop(self.current_index)
+        if self.currentIndex != len(self.history):
+            self.history.pop(self.currentIndex)
         self.history.append(command)
-        self.current_index = len(self.history)
+        self.currentIndex = len(self.history)
 
     def previousHistory(self) -> Union[str, None]:
-        self.current_index -= 1
-        if 0 <= self.current_index < len(self.history):
-            return self.history[self.current_index]
-        self.current_index += 1
+        self.currentIndex -= 1
+        if 0 <= self.currentIndex < len(self.history):
+            return self.history[self.currentIndex]
+        self.currentIndex += 1
         return None
 
     def nextHistory(self) -> Union[str, None]:
-        self.current_index += 1
-        if 0 <= self.current_index < len(self.history):
-            return self.history[self.current_index]
-        self.current_index -= 1
+        self.currentIndex += 1
+        if 0 <= self.currentIndex < len(self.history):
+            return self.history[self.currentIndex]
+        self.currentIndex -= 1
         return None
 
     def runCommand(self, command: str):
@@ -262,6 +454,7 @@ class TerminalEmulator(QTextEdit):
         self.interpreter.runsource(command)
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
+        self.localsUpdated.emit(self.interpreter.locals)
 
     def isSelectionReadOnly(self) -> bool:
         cursor: QTextCursor = self.textCursor()
@@ -274,7 +467,8 @@ class TerminalEmulator(QTextEdit):
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         key = event.key()
 
-        # history
+        # override keys
+        # up and down
         if key == Qt.Key_Up:
             previous = self.previousHistory()
             if previous is None:
@@ -287,7 +481,6 @@ class TerminalEmulator(QTextEdit):
                 return
             self.setCurrentLine(next)
             return
-
         # backspace
         if key == Qt.Key_Backspace:
             current = self.currentLine()
@@ -296,13 +489,45 @@ class TerminalEmulator(QTextEdit):
             if self.isSelectionReadOnly():
                 self.setCurrentLine("")
                 return
-
-        if self.isSelectionReadOnly() and not (key == Qt.Key_Left or key == Qt.Key_Right):
+        # home
+        if key == Qt.Key_Home:
+            """
+            how it works:
+            >> something|
+            |
+            something|
+            |something
+            >> |something
+            """
+            current = self.currentLine()
+            self.setRawCurrentLine("")
+            self.appendText(current)
+            self.moveCursor(QtGui.QTextCursor.StartOfLine)
+            self.appendText(TerminalEmulator.prompt)
             return
 
-        # return
+        if key == Qt.Key_End:
+            self.moveCursor(QtGui.QTextCursor.End)
+            return
+
+        shouldPress = False
+        if key in TerminalEmulator.selectionWhiteListKeys:
+            shouldPress = True
+
+        modifiers = event.modifiers()
+        if modifiers == Qt.ControlModifier or modifiers == Qt.AltModifier:
+            shouldPress = True
+
+        if not shouldPress and self.isSelectionReadOnly():
+            return
+
         if key == Qt.Key_Return:
             line = self.currentLine()
+            if line == TerminalEmulator.clearCommand:
+                self.clear()
+                self.setCurrentLine("")
+                return
+
             super(TerminalEmulator, self).keyPressEvent(event)
             self.appendHistory(line)
             self.runCommand(line)
@@ -326,11 +551,13 @@ class Display(QMainWindow):
 
         self.console = TerminalEmulator()
         self.setCentralWidget(self.console)
+        self.console.localsUpdated.connect(self.updateVariables)
 
         self.rightDock()
         self.bottomDock()
 
         self.setupRightDock()
+        self.setupBottomDock()
 
     def updateFilter(self, newFilter):
         self.methodTreeFilter.setFilterRegExp(str(newFilter))
@@ -346,7 +573,13 @@ class Display(QMainWindow):
 
     def rightDock(self):
         dock = QDockWidget("Methods", self)
+        dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
         dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
+        dock.setStyleSheet("""
+                    QDockWidget {
+                        titlebar-normal-icon: url(resources/dock/dock16.svg);
+                    }
+                """)
         vbox = QVBoxLayout()
 
         hbox = QHBoxLayout()
@@ -374,7 +607,15 @@ class Display(QMainWindow):
     def bottomDock(self):
         dock = QDockWidget("Variables", self)
         dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
+        dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
+        dock.setStyleSheet("""
+            QDockWidget {
+                titlebar-normal-icon: url(resources/dock/dock16.svg);
+            }
+        """)
+
         self.variableTable = QTableView(dock)
+        self.variableTable.setSortingEnabled(True)
         dock.setWidget(self.variableTable)
         self.addDockWidget(Qt.BottomDockWidgetArea, dock)
 
@@ -387,25 +628,51 @@ class Display(QMainWindow):
         self.methodTreeFilter.setSourceModel(self.model)
 
         self.methodTree.setModel(self.methodTreeFilter)
-        self.methodTree.selectionModel().selectionChanged.connect(self.methodTreeSelectionChanged)
+        self.methodTree.doubleClicked.connect(self.methodTreeDoubleClicked)
+        # self.methodTree.selectionModel().selectionChanged.connect(self.methodTreeSelectionChanged)
         self.methodTree.expandToDepth(0)
 
-    def updateVariables(self, variables):
-        # implement the variables
-        pass
+    def setupBottomDock(self):
+        self.updateVariables({})
 
-    def methodTreeSelectionChanged(self, event: QItemSelection):
-        if event.isEmpty():
-            return
-        selected: QItemSelectionRange = event.first()
-        index: QModelIndex = selected.indexes()[0]
+    def updateVariables(self, env: Dict[str, Optional[str]]):
+        data = []
+        empty = True
+        for key in env:
+            if key.startswith("__") and key.endswith("__"):
+                continue
+            val = env[key]
+            if isinstance(val, ModuleType):
+                continue
+
+            try:
+                module = val.__module__
+                if module != '__console__':
+                    continue
+            except:
+                pass
+
+            data.append([type_to_str(env[key]), key, str(env[key])])
+            empty = False
+
+        if empty:
+            data.append([])
+
+        model = CustomTableModel(["Type", "Name", "Value"], data)
+        self.variableTableFilter = CustomFilterModel()
+        self.variableTableFilter.setSourceModel(model)
+        self.variableTable.setModel(self.variableTableFilter)
+
+
+    def methodTreeDoubleClicked(self, index: QModelIndex):
         model: QStandardItemModel = self.methodTree.model().sourceModel()
         item: CustomStandardItem = model.itemFromIndex(self.methodTreeFilter.mapToSource(index))
-        if item is None or not isinstance(item.node, Function):
+        if item is None or (not isinstance(item.node, Function) and not isinstance(item.node, Class)):
             return
 
         self.console.writeFunction(item.node)
-        self.methodTree.selectionModel().clearSelection()
+        self.methodTree.setExpanded(index, not self.methodTree.isExpanded(index))
+
 
     def constructModuleTree(self) -> ModuleTree:
         moduleTree = ModuleTree()
@@ -415,6 +682,9 @@ class Display(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+
+    display = Display()
+    display.show()
 
     # dark mode
     app.setStyle("Fusion")
@@ -434,14 +704,11 @@ if __name__ == '__main__':
     dark_palette.setColor(QPalette.HighlightedText, Qt.white)
     app.setPalette(dark_palette)
     app.setStyleSheet("""
-            QToolTip { 
-                color: #ffffff; 
-                background-color: #2a82da; 
-                border: 1px solid white; 
-            }
-        """)
-
-    display = Display()
-    display.show()
+               QToolTip { 
+                   color: #ffffff; 
+                   background-color: #474747; 
+                   border: 1px solid white;
+               }
+           """)
 
     sys.exit(app.exec_())
