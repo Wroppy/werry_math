@@ -251,7 +251,7 @@ class Package(TreeNode):
 
 
 class ModuleTree(TreeNode):
-    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'all', 'webserver', 'gui']
+    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'all', 'webserver', 'gui', 'build', 'dist', 'cli']
     ignored_files = ['__init__.py']
     file_extension = '.py'
 

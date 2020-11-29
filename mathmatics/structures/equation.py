@@ -3,6 +3,7 @@ from typing import Callable, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import sympy
 
 from mathmatics.calculus.integral import integral
 from mathmatics.calculus.derivative import derivative
@@ -25,24 +26,59 @@ class Equation(MathObject, ABC):
         pass
 
     def derivative(self, x: float) -> float:
+        """
+        Calculates the derivative of this equation at x
+
+        :param x: X
+        :return: The derivative
+        """
         return derivative(self.y, x)
 
     def integral(self, start: float, end: float) -> float:
+        """
+        Calculates the definite integral from start to end for this equation
+
+        :param start: Start
+        :param end: End
+        :return: The definite integral
+        """
         return integral(self.y, start, end)
 
     def to_latex(self) -> Union[str, None]:
-        return str(self)
+        """
+        Convert this equation to_latex
 
-    @abstractmethod
-    def __str__(self):
-        pass
+        :return:
+        """
+        return None
+
+    def print_latex(self, **kwargs):
+        """
+        Prints the latex of the equation
+
+        :return: None
+        """
+        latex = self.to_latex()
+        if latex is None:
+            print("LaTex not available for this equation")
+        else:
+            # todo: move this init to somewhere else
+            sympy.init_printing()
+            expr = sympy.sympify(latex)
+            sympy.pprint(expr, use_unicode=True, **kwargs)
 
     def print_y(self, x: float):
+        """
+        Prints the equation evaluated at x
+
+        :param x: X
+        :return: None
+        """
         print(self.y(x))
 
     def graph(self, start: float = -5, end: float = 10, steps: float = 0.01):
         """
-        Graphs this equation
+        Graphs this equation from start to end
 
         :param start: Start x axis
         :param end: End x axis
@@ -52,7 +88,11 @@ class Equation(MathObject, ABC):
         xs = np.arange(start, end, steps)
         ys = []
         for x in xs:
-            ys.append(self.y(x))
+            try:
+                ys.append(self.y(x))
+            except Exception as e:
+                print(str(e))
+                ys.append(0)
 
         fig, ax = plt.subplots()
         # set center
@@ -79,11 +119,7 @@ class CustomEquation(Equation):
     def to_latex(self) -> Union[str, None]:
         return self.latex
 
-    def __str__(self):
-        return f"y = function(x)"
-
 
 if __name__ == '__main__':
     eq = CustomEquation(lambda x: 0.5 * x ** 2, "y=x^3")
     eq.graph()
-

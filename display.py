@@ -1,119 +1,179 @@
 import os
 from types import ModuleType
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import sys
 
+from cli.cli_parser import CLIParser
 from gui.common import type_to_str
 from gui.custom_models import CustomFilterModel, CustomTableModel
 from gui.resource_manager import ResourceManager
 from gui.terminal_emulator import TerminalEmulator, TerminalStatus
 from gui.module_tree import CustomStandardItem, Function, ModuleTree, Class
 
-cdir = os.path.dirname(os.path.realpath(__file__))
-
 
 class Display(QMainWindow):
     methodTree: QTreeView
 
-    def __init__(self, *args, **kwargs):
+    # static vars
+    ignoredModules = ["cdir"]
+
+    def __init__(self, parser: CLIParser, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # parse args
+        parser.parse(Display.ignoredModules)
+
+        # set current dir
+        flag, ok = parser.contains("cdir")
+        if ok and flag.has_value():
+            self.cdir = flag.value
+        else:
+            self.cdir = os.path.dirname(os.path.realpath(__file__))
+
+        # window frame setup
         self.setWindowTitle("WerryMath")
         self.resize(1200, 600)
 
+        # set icon
         icon = ResourceManager.load_icon("app/icon.png")
         self.setWindowIcon(icon)
 
-        vbox = QVBoxLayout()
+        # setup console
         self.console = TerminalEmulator("Started Python Interpreter")
-        vbox.addWidget(self.console)
         self.console_status = QLabel(str(TerminalStatus.idle.value))
         self.console_status.setAlignment(Qt.AlignRight)
-        vbox.addWidget(self.console_status)
-        widget = QWidget()
-        widget.setLayout(vbox)
-        self.setCentralWidget(widget)
+        vbox = Display.createVLayout(self.console, self.console_status)
+        self.setCentralWidget(vbox)
+
+        # bind console
         self.console.localsChanged.connect(self.updateVariables)
         self.console.statusChanged.connect(self.updateStatus)
-        self.rightDock()
-        self.bottomDock()
 
+        # create docks
+        self.createLeftDock()
+        self.createRightDock()
+        self.createBottomDock()
+
+        # setup docks
         self.setupRightDock()
         self.setupBottomDock()
+        self.setupLeftDock()
+
+        self.importModules(parser.imports())
+
+    def importModules(self, importStrings: List[str]):
+        for string in importStrings:
+            self.console.executeCommand(string)
+
+    def createDock(self, *args, **kwargs) -> QDockWidget:
+        dock = QDockWidget(*args, **kwargs, parent=self)
+        dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
+        dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
+        dock.setStyleSheet(
+            ResourceManager.load_css_with_var("dock.css",
+                                              ("icon()", ResourceManager.get_resource_url("icon", "dock/dock16.svg")))
+        )
+        return dock
+
+    @staticmethod
+    def createVLayout(*args: QWidget, vbox: QVBoxLayout = None) -> QWidget:
+        if vbox is None:
+            vbox = QVBoxLayout()
+        for widget in args:
+            vbox.addWidget(widget)
+        w = QWidget()
+        w.setLayout(vbox)
+        return w
+
+    @staticmethod
+    def createHLayout(*args: QWidget, hbox: QHBoxLayout = None) -> QWidget:
+        if hbox is None:
+            hbox = QHBoxLayout()
+        for widget in args:
+            hbox.addWidget(widget)
+        w = QWidget()
+        w.setLayout(hbox)
+        return w
 
     def updateStatus(self, newStatus: str):
         self.console_status.setText(newStatus)
 
-    def updateFilter(self, newFilter):
+    def updateFilter(self, newFilter: str):
         self.methodTreeFilter.setFilterRegExp(str(newFilter))
         if len(str(newFilter)) == 0:
             self.methodTree.expandToDepth(0)
         else:
             self.methodTree.expandAll()
 
-    def handleImportModule(self):
-        module = self.importLineEdit.text()
-        self.console.importModule(module)
-        self.importLineEdit.setText('')
+    def handleTreeSelect(self, index: QModelIndex):
+        model: QStandardItemModel = self.methodTree.model().sourceModel()
+        item: CustomStandardItem = model.itemFromIndex(self.methodTreeFilter.mapToSource(index))
+        if item is None or (not isinstance(item.node, Function) and not isinstance(item.node, Class)):
+            return
 
-    def rightDock(self):
-        dock = QDockWidget("Methods", self)
-        dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
-        dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
-        vbox = QVBoxLayout()
+        self.console.writeFunction(item.node)
+        self.methodTree.setExpanded(index, not self.methodTree.isExpanded(index))
 
+    # dock creations
+    def createLeftDock(self):
+        dock = self.createDock("Helpers")
+        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+
+    def createRightDock(self):
+        dock = self.createDock("Methods")
+
+        # create filter
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
-        label = QLabel("Import:")
-        self.importLineEdit = QLineEdit()
-        self.importLineEdit.returnPressed.connect(self.handleImportModule)
-        hbox.addWidget(label)
-        hbox.addWidget(self.importLineEdit)
-        widget = QWidget()
-        widget.setLayout(hbox)
-        vbox.addWidget(widget)
-
+        label = QLabel("Search")
         self.methodTreeFilterLineEdit = QLineEdit()
         self.methodTreeFilterLineEdit.textChanged.connect(self.updateFilter)
-        vbox.addWidget(self.methodTreeFilterLineEdit)
+        hbox = Display.createHLayout(label, self.methodTreeFilterLineEdit, hbox=hbox)
+
+        # create tree
         self.methodTree = QTreeView(dock)
         self.methodTree.setHeaderHidden(True)
-        vbox.addWidget(self.methodTree)
-        widget = QWidget()
-        widget.setLayout(vbox)
-        dock.setWidget(widget)
+
+        # add to display
+        vbox = Display.createVLayout(hbox, self.methodTree)
+        dock.setWidget(vbox)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
-    def bottomDock(self):
-        dock = QDockWidget("Variables", self)
-        dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
-        dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
+    def createBottomDock(self):
+        dock = self.createDock("Variables")
 
-
+        # create table
         self.variableTable = QTableView(dock)
         self.variableTable.setSortingEnabled(True)
+
+        # add to display
         dock.setWidget(self.variableTable)
         self.addDockWidget(Qt.BottomDockWidgetArea, dock)
 
+    # dock setups
     def setupRightDock(self):
-        # construct tree
-        module_tree = self.constructModuleTree()
-        self.model = module_tree.to_model()
+        # setup tree
+        moduleTree = ModuleTree(self.cdir)
+        moduleTree.parse()
+        self.model = moduleTree.to_model()
 
         self.methodTreeFilter = CustomFilterModel()
         self.methodTreeFilter.setSourceModel(self.model)
 
         self.methodTree.setModel(self.methodTreeFilter)
-        self.methodTree.doubleClicked.connect(self.methodTreeDoubleClicked)
-        # self.methodTree.selectionModel().selectionChanged.connect(self.methodTreeSelectionChanged)
+        self.methodTree.doubleClicked.connect(self.handleTreeSelect)
         self.methodTree.expandToDepth(0)
 
     def setupBottomDock(self):
+        # init variables
         self.updateVariables({})
+
+    def setupLeftDock(self):
+        pass
 
     def updateVariables(self, env: Dict[str, Optional[str]]):
         data = []
@@ -144,37 +204,28 @@ class Display(QMainWindow):
         self.variableTable.setModel(self.variableTableFilter)
 
 
-    def methodTreeDoubleClicked(self, index: QModelIndex):
-        model: QStandardItemModel = self.methodTree.model().sourceModel()
-        item: CustomStandardItem = model.itemFromIndex(self.methodTreeFilter.mapToSource(index))
-        if item is None or (not isinstance(item.node, Function) and not isinstance(item.node, Class)):
-            return
+def pre_display():
+    # fix windows icon not displaying
+    if sys.platform == "win32":
+        import ctypes
+        appid = "com.troppydash.werry_math"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appid)
 
-        self.console.writeFunction(item.node)
-        self.methodTree.setExpanded(index, not self.methodTree.isExpanded(index))
-
-
-    def constructModuleTree(self) -> ModuleTree:
-        moduleTree = ModuleTree(cdir)
-        moduleTree.parse()
-        return moduleTree
-
-
-if __name__ == '__main__':
+    # hidpi
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 
-    app = QApplication(sys.argv)
 
-    display = Display()
-    display.show()
-    
-    app.setAttribute(Qt.AA_EnableHighDpiScaling)
+def post_display(app: QApplication):
+    # custom style
     app.setStyle("Fusion")
 
+    # custom font
     font = ResourceManager.load_font("roboto/Roboto-Regular.ttf")
     if font is not None:
         app.setFont(font)
 
+    # dark mode
     dark_palette = QPalette()
     dark_palette.setColor(QPalette.Window, QColor(85, 85, 85))
     dark_palette.setColor(QPalette.WindowText, Qt.white)
@@ -190,23 +241,19 @@ if __name__ == '__main__':
     dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
     dark_palette.setColor(QPalette.HighlightedText, Qt.white)
     app.setPalette(dark_palette)
-    app.setStyleSheet(f"""
-               QToolTip {{ 
-                   color: #ffffff; 
-                   background-color: #474747; 
-                   border: 1px solid white;
-               }}
-               * {{
-                    font-size: 14px;
-               }}
-               QDockWidget {{
-                    titlebar-normal-icon: url({ResourceManager.get_resource_url("dock/dock16.svg")});
-               }}
-               QDockWidget::title {{
-                   background-color: #24292b;
-                   padding: 6px;
-                   margin: 0;
-               }} 
-           """)
+    # custom styles
+    app.setStyleSheet(ResourceManager.load_css("display.css"))
+
+
+if __name__ == '__main__':
+    pre_display()
+
+    app = QApplication(sys.argv)
+
+    p = CLIParser(sys.argv[1:])
+    display = Display(p)
+    display.show()
+
+    post_display(app)
 
     sys.exit(app.exec_())

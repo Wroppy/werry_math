@@ -217,13 +217,19 @@ class TerminalEmulator(QTextEdit):
             shouldPress = True
 
         modifiers = event.modifiers()
-        if modifiers == Qt.ControlModifier or modifiers == Qt.AltModifier:
+        if modifiers == Qt.ControlModifier:
+            if key == Qt.Key_V and self.isSelectionReadOnly():
+                return
+            shouldPress = True
+
+        if modifiers == Qt.AltModifier:
             shouldPress = True
 
         if not shouldPress and self.isSelectionReadOnly():
             return
 
         if key == Qt.Key_Return:
+            self.moveCursor(QTextCursor.End)
             line = self.currentLine()
             if line == TerminalEmulator.clearCommand:
                 self.clear()
