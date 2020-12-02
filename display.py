@@ -11,7 +11,7 @@ from cli.cli_parser import CLIParser
 from gui.common import type_to_str
 from gui.custom_models import CustomFilterModel, CustomTableModel
 from gui.resource_manager import ResourceManager
-from gui.terminal_emulator import TerminalEmulator, TerminalStatus
+from gui.terminal.terminal_emulator import TerminalEmulator, TerminalStatus
 from gui.module_tree import CustomStandardItem, Function, ModuleTree, Class
 
 
@@ -39,7 +39,7 @@ class Display(QMainWindow):
         self.resize(1200, 600)
 
         # set icon
-        icon = ResourceManager.load_icon("app/icon.png")
+        icon = ResourceManager.load_icon("app/icon_trans.png")
         self.setWindowIcon(icon)
 
         # setup console

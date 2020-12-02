@@ -11,6 +11,6 @@ def sigma(fn: Callable, n: int, to: int) -> float:
     :return: Sigma result
     """
     result = 0
-    for x in range(n, to):
+    for x in range(n, to+1):
         result += fn(x)
     return result

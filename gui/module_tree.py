@@ -7,6 +7,7 @@ from typing import *
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 
 from gui.common import type_to_str
+from utils.marker import Marker
 
 
 class CustomStandardItem(QStandardItem):
@@ -109,6 +110,10 @@ class Function(Variable):
         for fn_name, fn_callable in methods:
             if fn_callable.__module__ not in parent.to_import_prefix_str():
                 continue
+
+            if Marker.is_ignored(fn_callable):
+                continue
+
             results.append(Function(parent, fn_name, fn_callable))
         return results
 
@@ -140,6 +145,9 @@ class Class(Variable):
             if fn.__module__ not in self.parent.to_import_prefix_str():
                 continue
 
+            if Marker.is_ignored(fn):
+                continue
+
             function = Function(self, fn_name, fn, method=True)
             if fn_name == "__init__":
                 self.constructor = function
@@ -163,6 +171,10 @@ class Class(Variable):
         for cls_nam, cls in classes:
             if cls.__module__ not in parent.to_import_prefix_str():
                 continue
+
+            if Marker.is_ignored(cls):
+                continue
+
             cls = Class(parent, cls_nam, cls)
             cls.parse()
             results.append(cls)
@@ -251,7 +263,7 @@ class Package(TreeNode):
 
 
 class ModuleTree(TreeNode):
-    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'all', 'webserver', 'gui', 'build', 'dist', 'cli']
+    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'all', 'webserver', 'gui', 'build', 'dist', 'cli', 'utils']
     ignored_files = ['__init__.py']
     file_extension = '.py'
 

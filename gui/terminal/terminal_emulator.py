@@ -1,5 +1,7 @@
-import code
+import os
 import sys
+from abc import ABC, abstractmethod
+from code import InteractiveInterpreter, InteractiveConsole
 from enum import Enum
 from typing import List, Union
 
@@ -7,58 +9,81 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-# QTextEdit but better
 from gui.module_tree import Variable, Class, Function
 from gui.resource_manager import ResourceManager
 
 
+class TerminalCommand(ABC):
+    @abstractmethod
+    def match(self, line: str) -> bool:
+        pass
+
+    @abstractmethod
+    def execute(self, terminal: 'TerminalEmulator'):
+        pass
+
+
+class ClearCommand(TerminalCommand):
+    def match(self, line: str) -> bool:
+        return line == 'clear'
+
+    def execute(self, terminal: 'TerminalEmulator'):
+        pass
+
+
 class TerminalStatus(Enum):
+    """
+    Status of the terminal
+    """
     idle = 'idle'
     executing = 'executing'
     readonly = 'readonly'
 
 
 class TerminalEmulator(QTextEdit):
+    # static stuff
     prompt: str = ">> "
-    clearCommand: str = "clear"
-    selectionWhiteListKeys: List[Qt.Key] = [Qt.Key_Left, Qt.Key_Right]
 
+    # instance variables
     history: List[str]
-    currentIndex: int
+    historyIndex: int
+    commands: List[TerminalCommand]
+    status: TerminalStatus
 
-    interpreter: code.InteractiveInterpreter
+    # executing code
+    interpreter: InteractiveConsole
 
+    # signals
     localsChanged: pyqtSignal = pyqtSignal(object)
     statusChanged: pyqtSignal = pyqtSignal(str)
+
+    selectionWhiteListKeys: List[Qt.Key] = [Qt.Key_Left, Qt.Key_Right]
 
     def __init__(self, welcome_message: str = None, *args, **kwargs):
         super(QTextEdit, self).__init__(*args, **kwargs)
 
+        # setup instance variables
+        self.commands = [ClearCommand()]
         self.history = []
-        self.currentIndex = 0
-
-        self.lastStatus = TerminalStatus.idle
-
-        self.interpreter = code.InteractiveInterpreter()
-
-        # set font
-        font = ResourceManager.load_font("consolas/consolas.ttf")
-        if font is not None:
-            self.setFont(font)
-
-        self.setStyleSheet("""
-            QTextEdit {
-                background: #2e2e2e;
-                color: #ddd;
-                font-size: 16px;
-            }
-        """)
+        self.historyIndex = 0
+        self.status = TerminalStatus.idle
+        self.interpreter = InteractiveConsole()
 
         if welcome_message is not None:
             self.setText(welcome_message + "\n")
-
         self.setCurrentLine("")
+
+        # connect
         self.selectionChanged.connect(self.handleSelectionChanged)
+
+        self.setStyles()
+
+    def setStyles(self):
+        # styles
+        font = ResourceManager.load_font("consolas/consolas.ttf")
+        if font is not None:
+            self.setFont(font)
+        self.setStyleSheet(ResourceManager.load_css("terminal.css"))
 
     def handleSelectionChanged(self):
         if self.isSelectionReadOnly():
@@ -66,14 +91,10 @@ class TerminalEmulator(QTextEdit):
         else:
             self.changeStatus(TerminalStatus.idle)
 
-    def write(self, message: str):
-        self.appendLines(message.split('\n'))
-
-    def clear(self):
-        self.setText("")
-
-    def importModule(self, module: str):
-        self.executeCommand(f"from {module} import *")
+    def isSelectionReadOnly(self) -> bool:
+        cursor: QTextCursor = self.textCursor()
+        start = cursor.selectionStart()
+        return len(self.toPlainText()) - start > len(self.currentLine())
 
     def writeFunction(self, var: Variable):
         import_path = var.to_import_path()
@@ -81,7 +102,7 @@ class TerminalEmulator(QTextEdit):
         if isinstance(var, Class) or (isinstance(var, Function) and not var.method):
             if var.name not in self.interpreter.locals:
                 if root not in self.interpreter.locals:
-                    self.importModule(root)
+                    self.executeCommand(f"from {root} import *")
                 else:
                     self.appendCurrentLine(f"{import_path}")
                     self.setFocus()
@@ -96,6 +117,7 @@ class TerminalEmulator(QTextEdit):
         self.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.KeyboardModifiers()))
         self.setCurrentLine(current_line)
 
+    # Line Manipulations #
     def appendCurrentLine(self, text: str):
         self.setText(self.toPlainText() + text)
         self.moveCursor(QTextCursor.End)
@@ -121,50 +143,46 @@ class TerminalEmulator(QTextEdit):
 
     def appendText(self, text: str):
         self.insertPlainText(text)
+        self.moveCursor(QTextCursor.End)
 
+    # History Management #
     def appendHistory(self, command: str):
-        if self.currentIndex != len(self.history):
-            self.history.pop(self.currentIndex)
+        if self.historyIndex != len(self.history):
+            self.history.pop(self.historyIndex)
         self.history.append(command)
-        self.currentIndex = len(self.history)
+        self.historyIndex = len(self.history)
 
     def previousHistory(self) -> Union[str, None]:
-        self.currentIndex -= 1
-        if 0 <= self.currentIndex < len(self.history):
-            return self.history[self.currentIndex]
-        self.currentIndex += 1
+        self.historyIndex -= 1
+        if 0 <= self.historyIndex < len(self.history):
+            return self.history[self.historyIndex]
+        self.historyIndex += 1
         return None
 
     def nextHistory(self) -> Union[str, None]:
-        self.currentIndex += 1
-        if 0 <= self.currentIndex < len(self.history):
-            return self.history[self.currentIndex]
-        self.currentIndex -= 1
+        self.historyIndex += 1
+        if 0 <= self.historyIndex < len(self.history):
+            return self.history[self.historyIndex]
+        self.historyIndex -= 1
         return None
 
     def changeStatus(self, newStatus: TerminalStatus):
-        if newStatus == self.lastStatus:
+        if newStatus == self.status:
             return
-        self.lastStatus = newStatus
+        self.status = newStatus
         self.statusChanged.emit(str(newStatus.value))
 
     def runCommand(self, command: str):
+        self.changeStatus(TerminalStatus.executing)
+        sys.stdin = self
         sys.stdout = self
         sys.stderr = self
-        self.changeStatus(TerminalStatus.executing)
-        self.interpreter.runsource(command)
-        self.changeStatus(TerminalStatus.idle)
+        self.interpreter.push(command)
+        sys.stdin = sys.__stdin__
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         self.localsChanged.emit(self.interpreter.locals)
-
-    def isSelectionReadOnly(self) -> bool:
-        cursor: QTextCursor = self.textCursor()
-        start = cursor.selectionStart()
-
-        if len(self.toPlainText()) - start > len(self.currentLine()):
-            return True
-        return False
+        self.changeStatus(TerminalStatus.idle)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         key = event.key()
@@ -231,10 +249,7 @@ class TerminalEmulator(QTextEdit):
         if key == Qt.Key_Return:
             self.moveCursor(QTextCursor.End)
             line = self.currentLine()
-            if line == TerminalEmulator.clearCommand:
-                self.clear()
-                self.setCurrentLine("")
-                return
+
 
             super(TerminalEmulator, self).keyPressEvent(event)
             self.appendHistory(line)
@@ -243,3 +258,13 @@ class TerminalEmulator(QTextEdit):
             return
 
         super(TerminalEmulator, self).keyPressEvent(event)
+
+    # overrides
+    def write(self, message: str):
+        self.appendLines(message.split('\n'))
+
+    def clear(self):
+        self.setText("")
+
+    def readline(self):
+        return "input not supported yet"

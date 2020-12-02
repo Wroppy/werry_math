@@ -1,6 +1,5 @@
 from typing import Callable
 
-from mathmatics.calculus.common import sigma
 from mathmatics.exceptions.common import DerivativeNegativeDegree
 
 

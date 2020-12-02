@@ -3,6 +3,7 @@ from typing import Union, Optional, Tuple
 
 from PyQt5.QtGui import QFont, QFontDatabase, QIcon
 
+
 class ResourceManager:
     root = os.path.dirname(os.path.realpath(__file__))
 
@@ -59,7 +60,6 @@ class ResourceManager:
         for old, new in args:
             css = css.replace(old, f"url({new})")
         return css
-
 
 
 if __name__ == '__main__':

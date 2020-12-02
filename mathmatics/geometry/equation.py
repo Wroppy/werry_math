@@ -40,6 +40,11 @@ class LinearEquation(Equation):
         self.m = m
         self.c = c
 
+    @staticmethod
+    def from_gradient_and_sample(m: float, sample: Vector2D):
+        c = sample.y - m * sample.x
+        return LinearEquation(m, c)
+
     def y(self, x: float) -> float:
         return self.m * x + self.c
 

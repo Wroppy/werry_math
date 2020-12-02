@@ -18,7 +18,7 @@ class Line(MathObject, ABC):
         pass
 
     @abstractmethod
-    def __str__(self):
+    def to_ray(self) -> 'Ray':
         pass
 
 
@@ -45,8 +45,48 @@ class Line2D(Line):
     def to_latex(self) -> str:
         return f"(({self.start.x}, {self.start.y}), ({self.end.x}, {self.end.y}))"
 
+    def to_ray(self) -> 'Ray':
+        return Ray2D(self.magnitude(), self.y_intercept())
+
     def __str__(self):
         return f"Line start: ({self.start.x}, {self.start.y}), end: ({self.end.x}, {self.end.y})"
+
+
+class Ray(MathObject, ABC):
+    @abstractmethod
+    def to_equation(self) -> Equation:
+        pass
+
+    @abstractmethod
+    def to_line(self) -> 'Line':
+        pass
+
+    @abstractmethod
+    def y(self, x: float) -> float:
+        pass
+
+
+class Ray2D(Ray):
+    def to_latex(self) -> str:
+        return f"{self.m}*x+{self.c}"
+
+    def __init__(self, m: float, c: float):
+        self.m = m
+        self.c = c
+
+    def to_equation(self) -> Equation:
+        return LinearEquation(self.m, self.c)
+
+    def to_line(self) -> 'Line':
+        return Line2D(Vector2D(0, self.c), Vector2D(1, self.m))
+
+    def y(self, x: float) -> float:
+        return self.m * x + self.c
+
+    @staticmethod
+    def from_gradient_and_sample(m: float, sample: Vector2D) -> 'Ray2D':
+        c = sample.y - m * sample.x
+        return Ray2D(m, c)
 
 
 if __name__ == '__main__':
