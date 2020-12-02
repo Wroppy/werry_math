@@ -2,6 +2,7 @@ import os
 import sys
 from abc import ABC, abstractmethod
 from code import InteractiveInterpreter, InteractiveConsole
+from contextlib import contextmanager
 from enum import Enum
 from typing import List, Union, Tuple
 
@@ -31,7 +32,8 @@ class ClearCommand(TerminalCommand):
         return line == 'clear'
 
     def execute(self, terminal: 'TerminalEmulator'):
-        pass
+        terminal.setText('')
+        terminal.writeText(terminal.prompt)
 
 
 class TerminalStatus(Enum):
@@ -83,6 +85,7 @@ class TerminalEmulator(QTextEdit):
         worker.signals.running.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.running))
         worker.signals.waiting.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.waiting))
         worker.signals.started.connect(self.loadModules)
+        self.worker = worker
         self.threadPool.start(worker)
 
         if welcome_message is not None:
@@ -92,7 +95,6 @@ class TerminalEmulator(QTextEdit):
         # connect
         self.selectionChanged.connect(self.handleSelectionChanged)
 
-
     def setStyles(self):
         # styles
         font = ResourceManager.load_font("consolas/consolas.ttf")
@@ -100,6 +102,7 @@ class TerminalEmulator(QTextEdit):
             self.setFont(font)
         self.setStyleSheet(ResourceManager.load_css("terminal.css"))
 
+    # Selections #
     def handleSelectionChanged(self):
         if self.isSelectionReadOnly():
             self.setTerminalStatus(TerminalStatus.readonly)
@@ -111,6 +114,7 @@ class TerminalEmulator(QTextEdit):
         start = cursor.selectionStart()
         return len(self.toPlainText()) - start > len(self.currentLine())
 
+    # Running Methods #
     def writeFunction(self, var: Variable):
         import_path = var.to_import_path()
         root = import_path.split('.')[0]
@@ -131,6 +135,30 @@ class TerminalEmulator(QTextEdit):
             current_line += after_execute
         self.saved_line = current_line
 
+    def executeCommands(self, commands: List[str], after_execute: str = None):
+        current_line = self.currentLine()
+
+        for command in commands:
+            loop = QEventLoop()
+
+            def stop(_):
+                loop.quit()
+
+            self.worker.signals.finished.connect(stop)
+            self.executeCommand(command)
+            with self.wait_signal(loop):
+                pass
+            self.worker.signals.finished.disconnect(stop)
+
+        if after_execute is not None:
+            current_line += after_execute
+        self.saved_line = current_line
+
+    @contextmanager
+    def wait_signal(self, loop):
+        yield
+        loop.exec_()
+
     # Line Manipulations #
     def appendCurrentLine(self, text: str):
         self.setText(self.toPlainText() + text)
@@ -142,7 +170,7 @@ class TerminalEmulator(QTextEdit):
 
     def setCurrentLine(self, text: str):
         before = self.toPlainText()[:self.cursorIndex]
-        self.setText(before+text)
+        self.setText(before + text)
         self.moveCursor(QTextCursor.End)
 
     def currentLine(self):
@@ -173,7 +201,7 @@ class TerminalEmulator(QTextEdit):
         self.historyIndex -= 1
         return None
 
-    # status control
+    # Status Control #
     def setTerminalStatus(self, newStatus: TerminalStatus):
         if newStatus == self.status:
             return
@@ -203,16 +231,17 @@ class TerminalEmulator(QTextEdit):
         elif newStatus == TerminalWorkerStatus.running:
             self.setTerminalStatus(TerminalStatus.executing)
 
+    # Module Handling #
     def appendModule(self, module: str):
         self.modules.append(module)
 
     def loadModules(self):
-        # this is annoying without a delay
-        for module in self.modules:
-            self.executeCommand(module)
+        self.executeCommands(self.modules)
 
+    # Key Presses #
     def keyPressEvent(self, event: QKeyEvent) -> None:
         key = event.key()
+        modifiers = event.modifiers()
 
         # up and down
         if key == Qt.Key_Up:
@@ -230,18 +259,27 @@ class TerminalEmulator(QTextEdit):
 
         # backspace
         if key == Qt.Key_Backspace:
-            if self.isSelectionReadOnly():
+            if self.isSelectionReadOnly() or len(self.currentLine()) == 0:
                 return
 
         # home and end
         if key == Qt.Key_Home:
             self.moveCursor(QTextCursor.End)
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, len(self.currentLine()))
+            cursor.setPosition(self.cursorIndex, QTextCursor.MoveAnchor)
             self.setTextCursor(cursor)
             return
         if key == Qt.Key_End:
             self.moveCursor(QTextCursor.End)
+            return
+
+        # ctrl-A
+        if modifiers == Qt.ControlModifier and key == Qt.Key_A:
+            self.moveCursor(QTextCursor.End)
+            cursor: QTextCursor = self.textCursor()
+            cursor.setPosition(self.cursorIndex, QTextCursor.MoveAnchor)
+            cursor.setPosition(self.cursorIndex + len(self.currentLine()), QTextCursor.KeepAnchor)
+            self.setTextCursor(cursor)
             return
 
         # other whitelists
@@ -249,7 +287,6 @@ class TerminalEmulator(QTextEdit):
         if key in [Qt.Key_Left, Qt.Key_Right]:
             shouldPress = True
 
-        modifiers = event.modifiers()
         if modifiers == Qt.ControlModifier:
             if not (key == Qt.Key_V and self.isSelectionReadOnly()):
                 shouldPress = True
@@ -263,8 +300,16 @@ class TerminalEmulator(QTextEdit):
         if key == Qt.Key_Return:
             self.moveCursor(QTextCursor.End)
             line = self.currentLine()
-            super(TerminalEmulator, self).keyPressEvent(event)
             self.appendHistory(line)
+            super(TerminalEmulator, self).keyPressEvent(event)
+
+            if len(line) > 0 and line[0] == TerminalCommand.prefix:
+                line = line[len(TerminalCommand.prefix):]
+                for command in self.commands:
+                    if command.match(line):
+                        command.execute(self)
+                        return
+
             self.newLine.emit(line)
             return
 

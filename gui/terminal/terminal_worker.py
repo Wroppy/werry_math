@@ -23,6 +23,18 @@ class TerminalWorkerSignals(QObject):
     finished = pyqtSignal(object)
 
 
+class CustomConsole(InteractiveConsole):
+    def __init__(self, onStart, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.onStart = onStart
+
+    def raw_input(self, prompt=""):
+        print(prompt, end='')
+        self.raw_input = super(CustomConsole, self).raw_input
+        self.onStart.emit()
+        return input('')
+
+
 class TerminalWorker(QRunnable):
     # executing code
     interpreter: InteractiveConsole
@@ -30,15 +42,12 @@ class TerminalWorker(QRunnable):
     def __init__(self, newLine, *args, **kwargs):
         super(TerminalWorker, self).__init__(*args, **kwargs)
 
-        self.interpreter = InteractiveConsole()
         self.event = threading.Event()
         self.signals = TerminalWorkerSignals()
+        self.interpreter = CustomConsole(self.signals.started)
         self.line = ""
 
         self.newLine = newLine
-
-    def handleNewLine(self, line: str):
-        self.lines.append(line)
 
     def run(self):
         exception = None
@@ -46,7 +55,6 @@ class TerminalWorker(QRunnable):
         sys.stdout = self
         sys.stderr = self
         try:
-            self.signals.started.emit()
             self.interpreter.interact(banner="")
         except Exception as e:
             exception = e
@@ -65,8 +73,8 @@ class TerminalWorker(QRunnable):
         with self.wait_signal(self.newLine):
             pass
         self.signals.running.emit()
-        if self.line == "":
-            self.line = "\n"
+        if self.line == '':
+            self.line = '\n'
         return self.line
 
     @contextmanager
