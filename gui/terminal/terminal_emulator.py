@@ -3,7 +3,7 @@ import sys
 from abc import ABC, abstractmethod
 from code import InteractiveInterpreter, InteractiveConsole
 from enum import Enum
-from typing import List, Union
+from typing import List, Union, Tuple
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -11,9 +11,12 @@ from PyQt5.QtWidgets import *
 
 from gui.module_tree import Variable, Class, Function
 from gui.resource_manager import ResourceManager
+from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus
 
 
 class TerminalCommand(ABC):
+    prefix = "!"
+
     @abstractmethod
     def match(self, line: str) -> bool:
         pass
@@ -35,7 +38,7 @@ class TerminalStatus(Enum):
     """
     Status of the terminal
     """
-    idle = 'idle'
+    waiting = 'waiting'
     executing = 'executing'
     readonly = 'readonly'
 
@@ -49,34 +52,46 @@ class TerminalEmulator(QTextEdit):
     historyIndex: int
     commands: List[TerminalCommand]
     status: TerminalStatus
-
-    # executing code
-    interpreter: InteractiveConsole
+    cursorIndex: int
+    saved_line: str
+    modules = List[str]
 
     # signals
     localsChanged: pyqtSignal = pyqtSignal(object)
     statusChanged: pyqtSignal = pyqtSignal(str)
 
-    selectionWhiteListKeys: List[Qt.Key] = [Qt.Key_Left, Qt.Key_Right]
+    newLine: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, welcome_message: str = None, *args, **kwargs):
         super(QTextEdit, self).__init__(*args, **kwargs)
+
+        self.setStyles()
 
         # setup instance variables
         self.commands = [ClearCommand()]
         self.history = []
         self.historyIndex = 0
-        self.status = TerminalStatus.idle
+        self.status = TerminalStatus.waiting
         self.interpreter = InteractiveConsole()
+        self.cursorIndex = 0
+        self.saved_line = ""
+        self.modules = []
+
+        self.threadPool = QThreadPool()
+        worker = TerminalWorker(self.newLine)
+        worker.signals.finished.connect(lambda message: self.handleWorkerStatus(TerminalWorkerStatus.waiting, message))
+        worker.signals.running.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.running))
+        worker.signals.waiting.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.waiting))
+        worker.signals.started.connect(self.loadModules)
+        self.threadPool.start(worker)
 
         if welcome_message is not None:
-            self.setText(welcome_message + "\n")
+            self.writeText(welcome_message + "\n")
         self.setCurrentLine("")
 
         # connect
         self.selectionChanged.connect(self.handleSelectionChanged)
 
-        self.setStyles()
 
     def setStyles(self):
         # styles
@@ -87,9 +102,9 @@ class TerminalEmulator(QTextEdit):
 
     def handleSelectionChanged(self):
         if self.isSelectionReadOnly():
-            self.changeStatus(TerminalStatus.readonly)
+            self.setTerminalStatus(TerminalStatus.readonly)
         else:
-            self.changeStatus(TerminalStatus.idle)
+            self.setTerminalStatus(TerminalStatus.waiting)
 
     def isSelectionReadOnly(self) -> bool:
         cursor: QTextCursor = self.textCursor()
@@ -102,48 +117,40 @@ class TerminalEmulator(QTextEdit):
         if isinstance(var, Class) or (isinstance(var, Function) and not var.method):
             if var.name not in self.interpreter.locals:
                 if root not in self.interpreter.locals:
-                    self.executeCommand(f"from {root} import *")
+                    self.executeCommand(f"from {root} import *", var.to_console_str())
                 else:
                     self.appendCurrentLine(f"{import_path}")
-                    self.setFocus()
-                    return
 
-        self.appendCurrentLine(var.to_console_str())
         self.setFocus()
 
-    def executeCommand(self, command: str):
+    def executeCommand(self, command: str, after_execute: str = None):
         current_line = self.currentLine()
         self.setCurrentLine(command)
         self.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.KeyboardModifiers()))
-        self.setCurrentLine(current_line)
+        if after_execute is not None:
+            current_line += after_execute
+        self.saved_line = current_line
 
     # Line Manipulations #
     def appendCurrentLine(self, text: str):
         self.setText(self.toPlainText() + text)
         self.moveCursor(QTextCursor.End)
 
-    def setRawCurrentLine(self, text: str):
-        before = self.toPlainText().split('\n')[:-1]
-        before.append(f"{text}")
-        self.setText("\n".join(before))
+    def moveCursorToTheEnd(self):
+        self.cursorIndex = len(self.toPlainText())
         self.moveCursor(QTextCursor.End)
 
     def setCurrentLine(self, text: str):
-        before = self.toPlainText().split('\n')[:-1]
-        before.append(f"{TerminalEmulator.prompt}{text}")
-        self.setText("\n".join(before))
+        before = self.toPlainText()[:self.cursorIndex]
+        self.setText(before+text)
         self.moveCursor(QTextCursor.End)
 
     def currentLine(self):
-        return self.toPlainText().split('\n')[-1][len(TerminalEmulator.prompt):]
+        return self.toPlainText()[self.cursorIndex:]
 
-    def appendLines(self, lines: List[str]):
-        self.insertPlainText('\n'.join(lines))
-        self.moveCursor(QTextCursor.End)
-
-    def appendText(self, text: str):
+    def writeText(self, text: str):
         self.insertPlainText(text)
-        self.moveCursor(QTextCursor.End)
+        self.moveCursorToTheEnd()
 
     # History Management #
     def appendHistory(self, command: str):
@@ -166,28 +173,47 @@ class TerminalEmulator(QTextEdit):
         self.historyIndex -= 1
         return None
 
-    def changeStatus(self, newStatus: TerminalStatus):
+    # status control
+    def setTerminalStatus(self, newStatus: TerminalStatus):
         if newStatus == self.status:
+            return
+        if self.status == TerminalStatus.executing and newStatus != TerminalStatus.waiting:
             return
         self.status = newStatus
         self.statusChanged.emit(str(newStatus.value))
 
-    def runCommand(self, command: str):
-        self.changeStatus(TerminalStatus.executing)
-        sys.stdin = self
-        sys.stdout = self
-        sys.stderr = self
-        self.interpreter.push(command)
-        sys.stdin = sys.__stdin__
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        self.localsChanged.emit(self.interpreter.locals)
-        self.changeStatus(TerminalStatus.idle)
+    def writeResult(self, result: Tuple[str, object]):
+        display, variables = result
+        is_prompt = False
+        if display == '>>> ':
+            is_prompt = True
+            display = TerminalEmulator.prompt
+            self.localsChanged.emit(variables)
+        self.writeText(display)
+        if is_prompt:
+            if len(self.saved_line) != 0:
+                self.appendCurrentLine(self.saved_line)
+                self.saved_line = ""
+
+    def handleWorkerStatus(self, newStatus: TerminalWorkerStatus, result=None):
+        if newStatus == TerminalWorkerStatus.waiting:
+            self.setTerminalStatus(TerminalStatus.waiting)
+            if result is not None:
+                self.writeResult(result)
+        elif newStatus == TerminalWorkerStatus.running:
+            self.setTerminalStatus(TerminalStatus.executing)
+
+    def appendModule(self, module: str):
+        self.modules.append(module)
+
+    def loadModules(self):
+        # this is annoying without a delay
+        for module in self.modules:
+            self.executeCommand(module)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         key = event.key()
 
-        # override keys
         # up and down
         if key == Qt.Key_Up:
             previous = self.previousHistory()
@@ -201,70 +227,45 @@ class TerminalEmulator(QTextEdit):
                 return
             self.setCurrentLine(next)
             return
+
         # backspace
         if key == Qt.Key_Backspace:
-            current = self.currentLine()
-            if len(current) == 0:
-                return
             if self.isSelectionReadOnly():
-                self.setCurrentLine("")
                 return
-        # home
-        if key == Qt.Key_Home:
-            """
-            how it works:
-            >> something|
-            |
-            something|
-            |something
-            >> |something
-            """
-            current = self.currentLine()
-            self.setRawCurrentLine("")
-            self.appendText(current)
-            self.moveCursor(QTextCursor.StartOfLine)
-            self.appendText(TerminalEmulator.prompt)
-            return
 
+        # home and end
+        if key == Qt.Key_Home:
+            self.moveCursor(QTextCursor.End)
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, len(self.currentLine()))
+            self.setTextCursor(cursor)
+            return
         if key == Qt.Key_End:
             self.moveCursor(QTextCursor.End)
             return
 
+        # other whitelists
         shouldPress = False
-        if key in TerminalEmulator.selectionWhiteListKeys:
+        if key in [Qt.Key_Left, Qt.Key_Right]:
             shouldPress = True
 
         modifiers = event.modifiers()
         if modifiers == Qt.ControlModifier:
-            if key == Qt.Key_V and self.isSelectionReadOnly():
-                return
-            shouldPress = True
-
-        if modifiers == Qt.AltModifier:
+            if not (key == Qt.Key_V and self.isSelectionReadOnly()):
+                shouldPress = True
+        elif modifiers == Qt.AltModifier:
             shouldPress = True
 
         if not shouldPress and self.isSelectionReadOnly():
             return
 
+        # enter
         if key == Qt.Key_Return:
             self.moveCursor(QTextCursor.End)
             line = self.currentLine()
-
-
             super(TerminalEmulator, self).keyPressEvent(event)
             self.appendHistory(line)
-            self.runCommand(line)
-            self.setCurrentLine("")
+            self.newLine.emit(line)
             return
 
         super(TerminalEmulator, self).keyPressEvent(event)
-
-    # overrides
-    def write(self, message: str):
-        self.appendLines(message.split('\n'))
-
-    def clear(self):
-        self.setText("")
-
-    def readline(self):
-        return "input not supported yet"

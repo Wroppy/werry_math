@@ -24,6 +24,14 @@ class Display(QMainWindow):
     def __init__(self, parser: CLIParser, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # window frame setup
+        self.setWindowTitle("WerryMath")
+        self.resize(1200, 600)
+
+        # set icon
+        icon = ResourceManager.load_icon("app/icon_trans.png")
+        self.setWindowIcon(icon)
+
         # parse args
         parser.parse(Display.ignoredModules)
 
@@ -33,18 +41,9 @@ class Display(QMainWindow):
             self.cdir = flag.value
         else:
             self.cdir = os.path.dirname(os.path.realpath(__file__))
-
-        # window frame setup
-        self.setWindowTitle("WerryMath")
-        self.resize(1200, 600)
-
-        # set icon
-        icon = ResourceManager.load_icon("app/icon_trans.png")
-        self.setWindowIcon(icon)
-
         # setup console
         self.console = TerminalEmulator("Started Python Interpreter")
-        self.console_status = QLabel(str(TerminalStatus.idle.value))
+        self.console_status = QLabel(str(TerminalStatus.waiting.value))
         self.console_status.setAlignment(Qt.AlignRight)
         vbox = Display.createVLayout(self.console, self.console_status)
         self.setCentralWidget(vbox)
@@ -65,9 +64,9 @@ class Display(QMainWindow):
 
         self.importModules(parser.imports())
 
-    def importModules(self, importStrings: List[str]):
-        for string in importStrings:
-            self.console.executeCommand(string)
+    def importModules(self, import_str: List[str]):
+        for string in import_str:
+            self.console.appendModule(string)
 
     def createDock(self, *args, **kwargs) -> QDockWidget:
         dock = QDockWidget(*args, **kwargs, parent=self)
@@ -252,8 +251,12 @@ if __name__ == '__main__':
 
     p = CLIParser(sys.argv[1:])
     display = Display(p)
-    display.show()
 
     post_display(app)
+    display.show()
 
-    sys.exit(app.exec_())
+    try:
+        code = app.exec_()
+    except Exception as e:
+        print(e)
+    sys.exit(code)
