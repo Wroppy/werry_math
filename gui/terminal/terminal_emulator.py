@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 from abc import ABC, abstractmethod
@@ -57,6 +58,8 @@ class TerminalEmulator(QTextEdit):
     cursorIndex: int
     saved_line: str
     modules = List[str]
+    lines: List[str]
+    fontSize: int
 
     # signals
     localsChanged: pyqtSignal = pyqtSignal(object)
@@ -78,6 +81,7 @@ class TerminalEmulator(QTextEdit):
         self.cursorIndex = 0
         self.saved_line = ""
         self.modules = []
+        self.lines = []
 
         self.threadPool = QThreadPool()
         worker = TerminalWorker(self.newLine)
@@ -96,11 +100,20 @@ class TerminalEmulator(QTextEdit):
         self.selectionChanged.connect(self.handleSelectionChanged)
 
     def setStyles(self):
+        self.fontSize = 12
         # styles
         font = ResourceManager.load_font("consolas/consolas.ttf")
         if font is not None:
             self.setFont(font)
+            self.setFontSize(self.fontSize)
         self.setStyleSheet(ResourceManager.load_css("terminal.css"))
+
+    def setFontSize(self, size: int):
+        cursor = self.textCursor()
+        self.selectAll()
+        self.setFontPointSize(size)
+        self.setTextCursor(cursor)
+
 
     # Selections #
     def handleSelectionChanged(self):
@@ -216,7 +229,7 @@ class TerminalEmulator(QTextEdit):
         if display == '>>> ':
             is_prompt = True
             display = TerminalEmulator.prompt
-            self.localsChanged.emit(variables)
+            self.localsChanged.emit((variables))
         self.writeText(display)
         if is_prompt:
             if len(self.saved_line) != 0:
@@ -237,6 +250,11 @@ class TerminalEmulator(QTextEdit):
 
     def loadModules(self):
         self.executeCommands(self.modules)
+
+    def wheelEvent(self, event: QWheelEvent):
+        if event.modifiers() == Qt.ControlModifier:
+            self.fontSize += 1 * -math.copysign(1, event.angleDelta().y())
+            self.setFontSize(self.fontSize)
 
     # Key Presses #
     def keyPressEvent(self, event: QKeyEvent) -> None:
@@ -301,12 +319,13 @@ class TerminalEmulator(QTextEdit):
             self.moveCursor(QTextCursor.End)
             line = self.currentLine()
             self.appendHistory(line)
-            super(TerminalEmulator, self).keyPressEvent(event)
+            self.lines.append(line)
 
+            super(TerminalEmulator, self).keyPressEvent(event)
             if len(line) > 0 and line[0] == TerminalCommand.prefix:
-                line = line[len(TerminalCommand.prefix):]
+                striped_line = line[len(TerminalCommand.prefix):]
                 for command in self.commands:
-                    if command.match(line):
+                    if command.match(striped_line):
                         command.execute(self)
                         return
 

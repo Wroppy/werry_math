@@ -2,6 +2,8 @@ import tempfile
 import webbrowser
 import pathlib
 
+from utils.fs import open_url
+
 
 def start_desmos(equation: str = None):
     """
@@ -26,6 +28,6 @@ def start_desmos(equation: str = None):
         url = 'file://' + f.name
         f.write(html)
 
-    # open html
-    webbrowser.open(url=url)
-    print("temp file:", url)
+        # open html
+        print("temp file:", f.name)
+        open_url(url)

@@ -1,13 +1,19 @@
+import os
+import subprocess
 from abc import ABC, abstractmethod
 from typing import Callable, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import sympy
 
 from mathmatics.calculus.integral import integral
 from mathmatics.calculus.derivative import derivative
+from mathmatics.common import mpl_graph
 from mathmatics.structures.common import MathObject
+
+import tempfile
+
+from utils.fs import open_file
 
 
 class Equation(MathObject, ABC):
@@ -64,8 +70,27 @@ class Equation(MathObject, ABC):
         else:
             # todo: move this init to somewhere else
             sympy.init_printing()
-            expr = sympy.sympify(latex)
+            # todo: this does not print full latex
+            expr = sympy.sympify(latex, evaluate=False)
             sympy.pprint(expr, use_unicode=True, **kwargs)
+
+    def open_latex(self):
+        latex = self.to_latex()
+        if latex is None:
+            print("LaTex not available for this equation")
+            return
+
+        with tempfile.NamedTemporaryFile('w', delete=False, suffix='.png') as f:
+            path = f.name
+            try:
+                sympy.preview(f"${latex}$", viewer='file', filename=path,
+                              dvioptions=['-D', '600', '-z', '0', '--truecolor'])
+            except Exception as e:
+                print("error writing latex file")
+                print(e)
+                return
+            print(f"temp file: {path}")
+            open_file(path)
 
     def print_y(self, x: float):
         """
@@ -92,16 +117,9 @@ class Equation(MathObject, ABC):
                 ys.append(self.y(x))
             except Exception as e:
                 print(str(e))
-                ys.append(0)
+                ys.append(0.0)
 
-        fig, ax = plt.subplots()
-        # set center
-        ax.axhline(color='black', lw=0.5)
-        ax.axvline(color='black', lw=0.5)
-
-        # plot
-        ax.plot(xs, ys, 'b')
-        plt.show()
+        mpl_graph(xs, ys)
 
 
 class CustomEquation(Equation):
@@ -121,5 +139,5 @@ class CustomEquation(Equation):
 
 
 if __name__ == '__main__':
-    eq = CustomEquation(lambda x: 0.5 * x ** 2, "y=x^3")
-    eq.graph()
+    eq = CustomEquation(lambda x: 0.5 * x ** 2, r"\int_{0}^{1} f(x) dx")
+    eq.print_latex()

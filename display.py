@@ -10,6 +10,7 @@ import sys
 from cli.cli_parser import CLIParser
 from gui.common import type_to_str
 from gui.custom_models import CustomFilterModel, CustomTableModel
+from gui.display_bundle import DisplayBundle
 from gui.resource_manager import ResourceManager
 from gui.terminal.terminal_emulator import TerminalEmulator, TerminalStatus
 from gui.module_tree import CustomStandardItem, Function, ModuleTree, Class
@@ -19,7 +20,7 @@ class Display(QMainWindow):
     methodTree: QTreeView
 
     # static vars
-    ignoredModules = ["cdir"]
+    ignoredModules = ["cdir", "spath"]
 
     def __init__(self, parser: CLIParser, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,6 +42,14 @@ class Display(QMainWindow):
             self.cdir = flag.value
         else:
             self.cdir = os.path.dirname(os.path.realpath(__file__))
+
+        # set save dir
+        flag, ok = parser.contains("spath")
+        if ok and flag.has_value():
+            self.spath = flag.value
+        else:
+            self.spath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'commands')
+
         # setup console
         self.console = TerminalEmulator("Started Python Interpreter")
         self.console_status = QLabel(str(TerminalStatus.waiting.value))
@@ -62,12 +71,52 @@ class Display(QMainWindow):
         self.setupBottomDock()
         self.setupLeftDock()
 
+        self.show()
+
         self.importModules(parser.imports())
 
+        bundle = self.load()
+        if bundle is not None:
+            self.attempt_load(bundle)
+
+    # Bundling #
+    def to_display_bundle(self):
+        bundle = DisplayBundle()
+        bundle.set('history', self.console.lines)
+        return bundle
+
+    # Saving and Loading #
+    def save(self):
+        bundle = self.to_display_bundle()
+        bundle.dump(self.spath)
+
+    def load(self) -> Optional[DisplayBundle]:
+        return DisplayBundle.load(self.spath)
+
+    # Attempt save and load
+    def attempt_load(self, bundle):
+        reply = QMessageBox.question(self, 'Message', f'Load bundle from {self.spath}?', QMessageBox.Yes, QMessageBox.No)
+        if reply == QMessageBox.No:
+            return
+
+        history = bundle.get('history')
+        self.console.executeCommands(history)
+
+    def attempt_save(self, event):
+        reply = QMessageBox.question(self, 'Message', f'Save bundle to {self.spath}?', QMessageBox.Yes, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.save()
+        event.accept()
+
+    def closeEvent(self, event):
+        self.attempt_save(event)
+
+    # Import
     def importModules(self, import_str: List[str]):
         for string in import_str:
             self.console.appendModule(string)
 
+    # Static
     def createDock(self, *args, **kwargs) -> QDockWidget:
         dock = QDockWidget(*args, **kwargs, parent=self)
         dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
@@ -175,7 +224,7 @@ class Display(QMainWindow):
         pass
 
     def updateVariables(self, env: Dict[str, Optional[str]]):
-        data = []
+        self.data = []
         empty = True
         for key in env:
             if key.startswith("__") and key.endswith("__"):
@@ -191,13 +240,13 @@ class Display(QMainWindow):
             except:
                 pass
 
-            data.append([type_to_str(env[key]), key, str(env[key])])
+            self.data.append([type_to_str(type(env[key])), key, str(env[key])])
             empty = False
 
         if empty:
-            data.append([])
+            return
 
-        model = CustomTableModel(["Type", "Name", "Value"], data)
+        model = CustomTableModel(["Type", "Name", "Value"], self.data)
         self.variableTableFilter = CustomFilterModel()
         self.variableTableFilter.setSourceModel(model)
         self.variableTable.setModel(self.variableTableFilter)
@@ -249,14 +298,9 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
 
+    post_display(app)
+
     p = CLIParser(sys.argv[1:])
     display = Display(p)
 
-    post_display(app)
-    display.show()
-
-    try:
-        code = app.exec_()
-    except Exception as e:
-        print(e)
-    sys.exit(code)
+    sys.exit(app.exec_())
