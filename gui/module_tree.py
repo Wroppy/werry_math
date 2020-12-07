@@ -7,7 +7,7 @@ from typing import *
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 
 from gui.common import type_to_str
-from utils.marker import Marker
+from utils.markers import Marker
 
 
 class CustomStandardItem(QStandardItem):

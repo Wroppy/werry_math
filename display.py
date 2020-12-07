@@ -95,21 +95,21 @@ class Display(QMainWindow):
 
     # Attempt save and load
     def attempt_load(self, bundle):
-        reply = QMessageBox.question(self, 'Message', f'Load bundle from {self.spath}?', QMessageBox.Yes, QMessageBox.No)
+        reply = QMessageBox.question(self, 'Message', f'Load bundle from {self.spath}{DisplayBundle.ext}?', QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.No:
             return
 
         history = bundle.get('history')
         self.console.executeCommands(history)
 
-    def attempt_save(self, event):
-        reply = QMessageBox.question(self, 'Message', f'Save bundle to {self.spath}?', QMessageBox.Yes, QMessageBox.No)
+    def attempt_save(self):
+        reply = QMessageBox.question(self, 'Message', f'Save bundle to {self.spath}{DisplayBundle.ext}?', QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.save()
-        event.accept()
 
     def closeEvent(self, event):
-        self.attempt_save(event)
+        self.attempt_save()
+        event.accept()
 
     # Import
     def importModules(self, import_str: List[str]):

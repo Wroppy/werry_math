@@ -3,12 +3,10 @@ import threading
 from code import InteractiveConsole
 from contextlib import contextmanager
 from enum import Enum
-from time import sleep
-from typing import List
 
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+
+from utils.markers import Proxy, ProxyPackage
 
 
 class TerminalWorkerStatus(Enum):
@@ -21,6 +19,7 @@ class TerminalWorkerSignals(QObject):
     running = pyqtSignal()
     waiting = pyqtSignal()
     finished = pyqtSignal(object)
+    proxy = pyqtSignal(object)
 
 
 class CustomConsole(InteractiveConsole):
@@ -44,10 +43,17 @@ class TerminalWorker(QRunnable):
 
         self.event = threading.Event()
         self.signals = TerminalWorkerSignals()
+        Proxy.proxy_fn = self.proxy
         self.interpreter = CustomConsole(self.signals.started)
         self.line = ""
 
         self.newLine = newLine
+
+    def proxy(self, fn, args, kwargs):
+        self.signals.proxy.emit(ProxyPackage(fn, args, kwargs))
+
+    def locals(self):
+        return self.interpreter.locals
 
     def run(self):
         exception = None
@@ -58,10 +64,10 @@ class TerminalWorker(QRunnable):
             self.interpreter.interact(banner="")
         except Exception as e:
             exception = e
+        finally:
             sys.stdin = sys.__stdin__
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
-        finally:
             if exception is not None:
                 print(exception)
 

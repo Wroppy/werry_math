@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import *
 
 from gui.module_tree import Variable, Class, Function
 from gui.resource_manager import ResourceManager
-from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus
+from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus, ProxyPackage
 
 
 class TerminalCommand(ABC):
@@ -77,7 +77,6 @@ class TerminalEmulator(QTextEdit):
         self.history = []
         self.historyIndex = 0
         self.status = TerminalStatus.waiting
-        self.interpreter = InteractiveConsole()
         self.cursorIndex = 0
         self.saved_line = ""
         self.modules = []
@@ -89,6 +88,7 @@ class TerminalEmulator(QTextEdit):
         worker.signals.running.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.running))
         worker.signals.waiting.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.waiting))
         worker.signals.started.connect(self.loadModules)
+        worker.signals.proxy.connect(self.handleProxy)
         self.worker = worker
         self.threadPool.start(worker)
 
@@ -132,8 +132,9 @@ class TerminalEmulator(QTextEdit):
         import_path = var.to_import_path()
         root = import_path.split('.')[0]
         if isinstance(var, Class) or (isinstance(var, Function) and not var.method):
-            if var.name not in self.interpreter.locals:
-                if root not in self.interpreter.locals:
+            lcs = self.worker.locals()
+            if var.name not in lcs:
+                if root not in lcs:
                     self.executeCommand(f"from {root} import *", var.to_console_str())
                 else:
                     self.appendCurrentLine(f"{import_path}")
@@ -166,6 +167,9 @@ class TerminalEmulator(QTextEdit):
         if after_execute is not None:
             current_line += after_execute
         self.saved_line = current_line
+
+    def handleProxy(self, package: ProxyPackage):
+        package.call()
 
     @contextmanager
     def wait_signal(self, loop):

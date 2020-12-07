@@ -3,6 +3,7 @@ from typing import Dict, Optional
 
 
 class DisplayBundle:
+    ext: str = '.pik'
     data: Dict
 
     def __init__(self, data=None):
@@ -18,13 +19,13 @@ class DisplayBundle:
         return self.data[key]
 
     def dump(self, path: str):
-        with open(path, 'wb') as f:
+        with open(path + DisplayBundle.ext, 'wb') as f:
             pickle.dump(self.data, f)
 
     @staticmethod
     def load(path: str) -> Optional['DisplayBundle']:
         try:
-            with open(path, 'rb') as f:
+            with open(path + DisplayBundle.ext, 'rb') as f:
                 data = pickle.load(f)
                 return DisplayBundle(data)
         except OSError:

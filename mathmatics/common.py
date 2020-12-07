@@ -1,9 +1,12 @@
 from typing import List
-import matplotlib.pyplot as plt
+
+from utils.markers import Proxy
 
 
+@Proxy.runInMainThread
 def mpl_graph(xs: List[float], ys: List[float], title: str = None, xlabel: str = 'x', ylabel: str = 'y',
               type: str = 'plot'):
+    import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
     # set center
     ax.axhline(color='black', lw=0.5)

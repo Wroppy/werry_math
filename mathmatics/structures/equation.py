@@ -14,6 +14,7 @@ from mathmatics.structures.common import MathObject
 import tempfile
 
 from utils.fs import open_file
+from utils.markers import Proxy
 
 
 class Equation(MathObject, ABC):
@@ -137,7 +138,11 @@ class CustomEquation(Equation):
     def to_latex(self) -> Union[str, None]:
         return self.latex
 
+def test_graph():
+    CustomEquation(lambda x: x).graph()
+
 
 if __name__ == '__main__':
-    eq = CustomEquation(lambda x: 0.5 * x ** 2, r"\int_{0}^{1} f(x) dx")
-    eq.print_latex()
+    # eq = CustomEquation(lambda x: 0.5 * x ** 2, r"\int_{0}^{1} f(x) dx")
+    # eq.print_latex()
+    test_graph()
