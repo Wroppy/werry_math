@@ -121,7 +121,7 @@ if __name__ == '__main__':
         Addition(Number(1), Division(Number(1), Addition(Number(1), Multiplication(Addition(Number(1), Number(2)),
                                                                                    Addition(Number(1), Number(2))))))
     )
-    # print(equation.to_latex())
+    print(equation.to_latex())
     # solver = Solver(equation)
     # result = solver.solvewhere({
     #     "t_{1/2}": 12,

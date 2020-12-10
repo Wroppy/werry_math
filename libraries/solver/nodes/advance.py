@@ -40,6 +40,19 @@ class Root(AdvanceOperations):
 
         return rf"\sqrt{left}{right}"
 
+class SquareRoot(Root):
+    def __init__(self, right: Node):
+        super().__init__(Number(2), right)
+
+    def to_latex(self) -> str:
+        left = self.left.to_latex()
+        left = add_square(left)
+        right = self.right.to_latex()
+        right = add_brackets(right)
+
+        return rf"\sqrt{right}"
+
+
 
 class Logarithm(AdvanceOperations):
     precedence = 2
