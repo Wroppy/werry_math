@@ -1,7 +1,5 @@
-import math
-
-from common.solver.nodes import *
-from common.structures.formula import Formula, create_solver
+from libraries.solver.nodes import *
+from libraries.structures.formula import Formula, create_solver
 
 
 class HalflifeFormula(Formula):
@@ -40,8 +38,8 @@ class HalflifeFormula(Formula):
             Multiplication(
                 Symbol("t"),
                 Division(
-                    Logarithm(Number(math.e), Number(2)),
-                    Logarithm(Number(math.e), Division(Symbol("N_{0}"), Symbol("N")))
+                    NaturalLogarithm(Number(2)),
+                    NaturalLogarithm(Division(Symbol("N_{0}"), Symbol("N")))
                 )
             )
         )

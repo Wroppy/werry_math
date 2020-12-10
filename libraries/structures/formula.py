@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Callable, Any, Union, Optional
 
-from common.solver.nodes import Equal
-from common.solver.solver import Solver
+from libraries.solver.nodes import Equal
+from libraries.solver.solver import Solver
 from utils.latex import open_latex
 from utils.markers import Marker
 
@@ -76,9 +76,8 @@ class Formula(ABC):
     solvers: Dict[str, t_solver] = {}
     symbols: List[str] = []
 
-    @abstractmethod
     def to_latex(self) -> str:
-        pass
+        return self.to_node().to_latex()
 
     @abstractmethod
     def to_node(self) -> Equal:

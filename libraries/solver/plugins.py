@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from typing import Tuple
 
-from common.solver.nodes import *
-from common.solver.common import *
+from libraries.solver.nodes import *
+from libraries.solver.common import *
 
 
 class Plugin(ABC):

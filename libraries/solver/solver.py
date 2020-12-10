@@ -1,9 +1,9 @@
 import copy
 from typing import Any, Optional, List, Dict
 
-from common.solver.common import RIGHT_SIDE, UNDETERMINED, LEFT_SIDE
-from common.solver.nodes import *
-from common.solver.plugins import Plugin, BasicPlugin, AdvancePlugin
+from libraries.solver.common import *
+from libraries.solver.nodes import *
+from libraries.solver.plugins import Plugin, BasicPlugin, AdvancePlugin
 
 
 class MoreThanOneUnknown(Exception):
@@ -102,24 +102,30 @@ class Solver:
 
 
 if __name__ == '__main__':
-    # equation = Equals(Symbol("F"), Multiplication(Symbol("m"), Symbol("a")))
+    # equation = Equal(Symbol("F"), Multiplication(Symbol("m"), Multiplication(Addition(Number(1), Number(2)), Number(5))))
     # solver = Solver(equation, [BasicPlugin(), AdvancePlugin()])
-    # result = solver.solvewhere(F=5, m=3)
-
+    # print(equation.to_latex())
+    # quit()
+    # equation = Equal(
+    #     Symbol("t_{1/2}"),
+    #     Multiplication(
+    #         Symbol("t"),
+    #         Division(
+    #             NaturalLogarithm(Number(2)),
+    #             NaturalLogarithm(Division(Symbol("N_{0}"), Symbol("N")))
+    #         )
+    #     )
+    # )
     equation = Equal(
-        Symbol("t_{1/2}"),
-        Multiplication(
-            Symbol("t"),
-            Division(
-                Logarithm(Number(math.e), Number(2)),
-                Logarithm(Number(math.e), Division(Symbol("N_{0}"), Symbol("N")))
-            )
-        )
+        Symbol("x"),
+        Addition(Number(1), Division(Number(1), Addition(Number(1), Multiplication(Addition(Number(1), Number(2)),
+                                                                                   Addition(Number(1), Number(2))))))
     )
-    solver = Solver(equation)
-    result = solver.solvewhere({
-        "t_{1/2}": 12,
-        "t": 56,
-        "N": 1000
-    })
-    print(result)
+    # print(equation.to_latex())
+    # solver = Solver(equation)
+    # result = solver.solvewhere({
+    #     "t_{1/2}": 12,
+    #     "t": 56,
+    #     "N": 1000
+    # })
+    # print(result)

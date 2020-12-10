@@ -21,16 +21,20 @@ class Node(ABC):
     def eval(self) -> float:
         pass
 
+    @abstractmethod
+    def has_symbol(self, symbol: str) -> bool:
+        pass
+
+    @abstractmethod
+    def to_latex(self) -> str:
+        pass
+
     def contain_symbol(self, symbol: str) -> bool:
         if self.contains_symbol is not None:
             return self.contains_symbol
         has_symbol = self.has_symbol(symbol)
         self.contains_symbol = has_symbol
         return has_symbol
-
-    @abstractmethod
-    def has_symbol(self, symbol: str) -> bool:
-        pass
 
 
 class StableNode(Node, ABC):
@@ -52,6 +56,9 @@ class Constant(StableNode):
     def has_symbol(self, symbol: str) -> bool:
         return False
 
+    def to_latex(self) -> str:
+        return f"{self.symbol}"
+
 
 class Symbol(StableNode):
     def __init__(self, symbol: str):
@@ -69,6 +76,9 @@ class Symbol(StableNode):
             return True
         return False
 
+    def to_latex(self) -> str:
+        return f"{self.symbol}"
+
 
 class Number(StableNode):
     def __init__(self, value: float):
@@ -85,7 +95,12 @@ class Number(StableNode):
     def has_symbol(self, symbol: str) -> bool:
         return False
 
+    def to_latex(self) -> str:
+        return f"{self.value}"
+
+
 class Operation(Node, ABC):
+    precedence: int
     left: Node
     right: Node
 
@@ -102,6 +117,10 @@ class Operation(Node, ABC):
 
     def has_symbol(self, symbol: str) -> bool:
         return self.left.has_symbol(symbol) or self.right.has_symbol(symbol)
+
+    @staticmethod
+    def is_operation(value: Node):
+        return isinstance(value, Operation)
 
 
 class Equal(Node):
@@ -129,3 +148,6 @@ class Equal(Node):
 
     def has_symbol(self, symbol: str) -> bool:
         return True
+
+    def to_latex(self) -> str:
+        return f"{self.left.to_latex()}={self.right.to_latex()}"
