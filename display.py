@@ -1,4 +1,5 @@
 import os
+import traceback
 from types import ModuleType
 from typing import Dict, Optional, List
 
@@ -79,6 +80,9 @@ class Display(QMainWindow):
         if bundle is not None:
             self.attempt_load(bundle)
 
+    def cleanUp(self):
+        self.console.cleanUp()
+
     # Bundling #
     def to_display_bundle(self):
         bundle = DisplayBundle()
@@ -109,7 +113,8 @@ class Display(QMainWindow):
 
     def closeEvent(self, event):
         self.attempt_save()
-        event.accept()
+        self.cleanUp()
+        super(Display, self).closeEvent(event)
 
     # Import
     def importModules(self, import_str: List[str]):
@@ -117,14 +122,10 @@ class Display(QMainWindow):
             self.console.appendModule(string)
 
     # Static
-    def createDock(self, *args, **kwargs) -> QDockWidget:
-        dock = QDockWidget(*args, **kwargs, parent=self)
+    def createDock(self, *args) -> QDockWidget:
+        dock = QDockWidget(*args, parent=self)
         dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
         dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
-        dock.setStyleSheet(
-            ResourceManager.load_css_with_var("dock.css",
-                                              ("icon()", ResourceManager.get_resource_url("icon", "dock/dock16.svg")))
-        )
         return dock
 
     @staticmethod
@@ -207,6 +208,7 @@ class Display(QMainWindow):
         # setup tree
         moduleTree = ModuleTree(self.cdir)
         moduleTree.parse()
+
         self.model = moduleTree.to_model()
 
         self.methodTreeFilter = CustomFilterModel()
@@ -263,6 +265,11 @@ def pre_display():
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 
+    # set path
+    old = sys.path.pop()
+    currentDir = os.path.dirname(os.path.realpath(__file__))
+    sys.path.append(os.path.realpath(currentDir))
+    sys.path.append(old)
 
 def post_display(app: QApplication):
     # custom style
@@ -290,9 +297,14 @@ def post_display(app: QApplication):
     dark_palette.setColor(QPalette.HighlightedText, Qt.white)
     app.setPalette(dark_palette)
     # custom styles
-    app.setStyleSheet(ResourceManager.load_css("display.css"))
+    app.setStyleSheet(ResourceManager.join_css(
+        ResourceManager.load_css("display.css"),
+        ResourceManager.load_css_with_var("dock.css",
+                                          ("icon()", ResourceManager.get_resource_url("icon", "dock/dock64.svg")))
+    ))
 
 
+# TODO: Fix icon
 if __name__ == '__main__':
     pre_display()
 
@@ -301,6 +313,16 @@ if __name__ == '__main__':
     post_display(app)
 
     p = CLIParser(sys.argv[1:])
-    display = Display(p)
 
-    sys.exit(app.exec_())
+    display = None
+    try:
+        display = Display(p)
+        code = app.exec_()
+    except Exception as e:
+        sys.stdin = sys.__stdin__
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        traceback.print_exc()
+        os._exit(1)
+
+    os._exit(0)

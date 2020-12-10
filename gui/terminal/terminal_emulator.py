@@ -82,7 +82,6 @@ class TerminalEmulator(QTextEdit):
         self.modules = []
         self.lines = []
 
-        self.threadPool = QThreadPool()
         worker = TerminalWorker(self.newLine)
         worker.signals.finished.connect(lambda message: self.handleWorkerStatus(TerminalWorkerStatus.waiting, message))
         worker.signals.running.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.running))
@@ -90,7 +89,7 @@ class TerminalEmulator(QTextEdit):
         worker.signals.started.connect(self.loadModules)
         worker.signals.proxy.connect(self.handleProxy)
         self.worker = worker
-        self.threadPool.start(worker)
+        QThreadPool().globalInstance().start(worker)
 
         if welcome_message is not None:
             self.writeText(welcome_message + "\n")
@@ -98,6 +97,9 @@ class TerminalEmulator(QTextEdit):
 
         # connect
         self.selectionChanged.connect(self.handleSelectionChanged)
+
+    def cleanUp(self):
+        self.newLine.emit('quit()')
 
     def setStyles(self):
         self.fontSize = 12
@@ -131,13 +133,14 @@ class TerminalEmulator(QTextEdit):
     def writeFunction(self, var: Variable):
         import_path = var.to_import_path()
         root = import_path.split('.')[0]
+        # TODO Fix this
         if isinstance(var, Class) or (isinstance(var, Function) and not var.method):
             lcs = self.worker.locals()
             if var.name not in lcs:
                 if root not in lcs:
                     self.executeCommand(f"from {root} import *", var.to_console_str())
-                else:
-                    self.appendCurrentLine(f"{import_path}")
+            else:
+                self.appendCurrentLine(f"{import_path}")
 
         self.setFocus()
 
@@ -199,8 +202,9 @@ class TerminalEmulator(QTextEdit):
 
     # History Management #
     def appendHistory(self, command: str):
-        if self.historyIndex != len(self.history):
+        if self.historyIndex != len(self.history) and command == self.history[self.historyIndex]:
             self.history.pop(self.historyIndex)
+        self.historyIndex = len(self.history)
         self.history.append(command)
         self.historyIndex = len(self.history)
 
@@ -257,8 +261,10 @@ class TerminalEmulator(QTextEdit):
 
     def wheelEvent(self, event: QWheelEvent):
         if event.modifiers() == Qt.ControlModifier:
-            self.fontSize += 1 * -math.copysign(1, event.angleDelta().y())
+            self.fontSize += math.copysign(1, event.angleDelta().y())
             self.setFontSize(self.fontSize)
+        else:
+            super(TerminalEmulator, self).wheelEvent(event)
 
     # Key Presses #
     def keyPressEvent(self, event: QKeyEvent) -> None:

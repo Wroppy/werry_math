@@ -14,6 +14,7 @@ from mathmatics.structures.common import MathObject
 import tempfile
 
 from utils.fs import open_file
+from utils.latex import open_latex
 from utils.markers import Proxy
 
 
@@ -80,18 +81,7 @@ class Equation(MathObject, ABC):
         if latex is None:
             print("LaTex not available for this equation")
             return
-
-        with tempfile.NamedTemporaryFile('w', delete=False, suffix='.png') as f:
-            path = f.name
-            try:
-                sympy.preview(f"${latex}$", viewer='file', filename=path,
-                              dvioptions=['-D', '600', '-z', '0', '--truecolor'])
-            except Exception as e:
-                print("error writing latex file")
-                print(e)
-                return
-            print(f"temp file: {path}")
-            open_file(path)
+        open_latex(latex)
 
     def print_y(self, x: float):
         """

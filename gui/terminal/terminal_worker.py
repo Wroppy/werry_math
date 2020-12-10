@@ -33,7 +33,6 @@ class CustomConsole(InteractiveConsole):
         self.onStart.emit()
         return input('')
 
-
 class TerminalWorker(QRunnable):
     # executing code
     interpreter: InteractiveConsole
@@ -56,20 +55,17 @@ class TerminalWorker(QRunnable):
         return self.interpreter.locals
 
     def run(self):
-        exception = None
         sys.stdin = self
         sys.stdout = self
         sys.stderr = self
         try:
             self.interpreter.interact(banner="")
-        except Exception as e:
-            exception = e
+        except:
+            pass
         finally:
             sys.stdin = sys.__stdin__
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
-            if exception is not None:
-                print(exception)
 
     def write(self, message: str):
         self.signals.finished.emit((message, self.interpreter.locals))

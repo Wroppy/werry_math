@@ -52,6 +52,9 @@ class ResourceManager:
     def load_css(path: str) -> str:
         with open(os.path.join(ResourceManager.get_resource_location("style", path)), 'r') as f:
             return f.read()
+    @staticmethod
+    def join_css(*args) -> str:
+        return '\n'.join(args)
 
     @staticmethod
     def load_css_with_var(path: str, *args: Tuple[str, str]):
