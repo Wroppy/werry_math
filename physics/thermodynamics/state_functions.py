@@ -16,3 +16,21 @@ class Enthalpy(Formula):
     def to_node(self) -> Equal:
         return Symbol("H") == Symbol("U") - Symbol("P") * Symbol("V")
 
+
+class GibbsFreeEnergy(Formula):
+    """
+    Gibb's Free Energy is a measure of the amount of 'free' energy in a system that can do work
+    This energy can drive endothermic reactions without external force or drive spontaneous reactions to not release energy
+    If the Gibb's Free Energy is decreasing, the reaction will be spontaneous
+    If the change is zero, the reaction is in equilibrium
+    If the change is increasing, the reaction is non-spontaneous
+    """
+    description = {
+        r"\Delta G": ("The change in Gibbs Free Energy in Joules", float),
+        r"\Delta H": ("The change in enthalpy in Joules", float),
+        "T": ("The temperature in Kelvin", float),
+        r"\Delta S": ("The change in entropy in Joules per Kelvin", float)
+    }
+
+    def to_node(self) -> Equal:
+        return Symbol(r"\Delta G") == Symbol(r"\Delta H") - Symbol("T") * Symbol(r"\Delta S")

@@ -40,10 +40,30 @@ class HessLaw(Formula):
     Hess's law states that the change in enthalpy is path-independent
     Meaning we can directly compare the enthalpy between the start and the final form
     """
+
     def to_node(self) -> Equal:
         return Symbol(r"\Delta H_{reaction}") == \
-               Sum(Sub(Symbol("n_p")*Symbol("H_f"), String('products'))) \
-               - Sum(Sub(Symbol("n_r")*Symbol("H_f"), String('reactants')))
+               Sum(Sub(Symbol("n_p") * Symbol(r"\delta H_f"), String('products'))) \
+               - Sum(Sub(Symbol("n_r") * Symbol(r"\delta H_f"), String('reactants')))
+
+
+class EntropyLaw(Formula):
+    latex_only = True
+
+    def to_node(self) -> Equal:
+        return Symbol(r"\Delta S_{reaction}") == \
+               Sum(Sub(Symbol("n_p") * Symbol("S_f"), String('products'))) \
+               - Sum(Sub(Symbol("n_r") * Symbol("S_f"), String('reactants')))
+
+
+class GibbLaw(Formula):
+    latex_only = True
+
+    def to_node(self) -> Equal:
+        return Symbol(r"\Delta G_{reaction}") == \
+               Sum(Sub(Symbol("n_p") * Symbol(r"\Delta G_f"), String('products'))) \
+               - Sum(Sub(Symbol("n_r") * Symbol(r"\Delta G_f"), String('reactants')))
+
 
 if __name__ == '__main__':
     # law = SpecificHeatCapacity()
