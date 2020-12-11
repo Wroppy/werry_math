@@ -1,8 +1,8 @@
-from libraries.solver.nodes import *
+from libraries.solver.nodes.extension import *
 from libraries.structures.formula import Formula
 
 
-class HalflifeFormula(Formula):
+class Halflife(Formula):
     """
     Radioactive element halflife calculator
     """
@@ -14,19 +14,33 @@ class HalflifeFormula(Formula):
     }
 
     def to_node(self) -> Equal:
-        return Equal(
-            Symbol("t_{1/2}"),
-            Multiplication(
-                Symbol("t"),
-                Division(
-                    NaturalLogarithm(Number(2)),
-                    NaturalLogarithm(Division(Symbol("N_{0}"), Symbol("N")))
+        return Symbol("t_{1/2}") == Symbol("t") * (
+                NaturalLogarithm(Number(2))
+                /
+                NaturalLogarithm(
+                    Symbol("N_{0}")
+                    /
+                    Symbol("N")
                 )
-            )
         )
+        # return Equal(
+        #     Symbol("t_{1/2}"),
+        #     Multiplication(
+        #         Symbol("t"),
+        #         Division(
+        #             NaturalLogarithm(Number(2)),
+        #             NaturalLogarithm(Division(Symbol("N_{0}"), Symbol("N")))
+        #         )
+        #     )
+        # )
 
 
 if __name__ == '__main__':
-    f = HalflifeFormula()
+    f = Halflife()
+    print(f.solvewhere({
+        "t": 521,
+        "N": 312312,
+        "N_{0}": 123
+    }))
     # f.describe('t_{1/2}')
     # print(f.solvefor('N_{0}'))

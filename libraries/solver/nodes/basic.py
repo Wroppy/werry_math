@@ -67,4 +67,4 @@ class Subtraction(BasicOperations):
     operator = '-'
 
     def eval(self) -> float:
-        return self.left.eval() + self.right.eval()
+        return self.left.eval() - self.right.eval()

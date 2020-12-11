@@ -10,7 +10,7 @@ def open_latex(latex):
         path = f.name
         try:
             sympy.preview(f"${latex}$", viewer='file', filename=path,
-                          dvioptions=['-D', '600', '-z', '0', '--truecolor'])
+                          dvioptions=['-D', '600', '-z', '0', '--truecolor'], euler=False)
         except Exception as e:
             print("error writing latex file")
             print(e)

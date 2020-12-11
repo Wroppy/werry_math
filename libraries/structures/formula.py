@@ -5,6 +5,12 @@ from libraries.solver.nodes import Equal
 from libraries.solver.solver import Solver
 from utils.latex import open_latex
 
+
+class LatexOnlyFormula(Exception):
+    def __init__(self):
+        super(LatexOnlyFormula, self).__init__("cannot solve for latex only formulas")
+
+
 def format_type(ty: type) -> str:
     if ty == int:
         return 'int'
@@ -15,6 +21,7 @@ def format_type(ty: type) -> str:
 
 class Formula(ABC):
     description: Dict[str, Tuple[str, type]]
+    latex_only: bool
 
     @abstractmethod
     def to_node(self) -> Equal:
@@ -66,7 +73,13 @@ symbols:
             return
         open_latex(latex)
 
+    def is_latex_only(self):
+        return hasattr(self, "latex_only")
+
     def solvewhere(self, symbols: Dict[str, Any] = None, **kwargs: Any) -> float:
+        if self.is_latex_only():
+            raise LatexOnlyFormula
+
         solver = Solver(self.to_node())
         return solver.solvewhere(symbols, **kwargs)
 
