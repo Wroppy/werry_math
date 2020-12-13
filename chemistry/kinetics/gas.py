@@ -1,5 +1,5 @@
 from chemistry.constants import R
-from libraries.solver.nodes import *
+from libraries.solver.nodes.extension import *
 from libraries.structures.formula import Formula
 
 
@@ -87,6 +87,20 @@ class EffusionLaw(Formula):
                 )
             )
         )
+
+
+class HenrysLaw(Formula):
+    """
+    Henry's Law states the concentration of a gas in a solution is proportional to the pressure of the gas above it
+    """
+    description = {
+        "C": ("The concentration of the gas in a solution", float),
+        "k_H": ("Henry's Law Constant", float),
+        "P": ("The partial pressure of the gas above the solution", float)
+    }
+
+    def to_node(self) -> Equal:
+        return Symbol("C") == Symbol("k_H") * Symbol("P")
 
 
 if __name__ == '__main__':

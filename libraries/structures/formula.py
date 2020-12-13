@@ -20,7 +20,7 @@ def format_type(ty: type) -> str:
 
 
 class Formula(ABC):
-    description: Dict[str, Tuple[str, type]]
+    description: Dict[str, Union[str, Tuple[str, type]]]
     latex_only: bool
 
     @abstractmethod
@@ -43,13 +43,23 @@ class Formula(ABC):
 
         if hasattr(self, 'description'):
             max_symbol_length = len(max(self.description.keys(), key=lambda k: len(k)))
-            max_type_length = len(format_type(max(self.description.values(), key=lambda i: len(format_type(i[1])))[1]))
+            max_type_length = 0
+            if len(self.description) > 0:
+                for key in self.description:
+                    value = self.description[key]
+                    if isinstance(value, str):
+                        continue
+                    max_type_length = max(max_type_length, len(format_type(value[1])))
             symbols = []
             for symbol in self.description:
                 data = self.description[symbol]
                 padded_symbol = symbol + ' ' * (max_symbol_length - len(symbol))
-                padded_type = format_type(data[1]) + ' ' * (max_type_length - len(format_type(data[1])))
-                message = f"{padded_symbol}: [{padded_type}] {data[0]}"
+                message = f"{padded_symbol}: "
+                if isinstance(data, str):
+                    message += ' ' * (max_type_length + 3) + data
+                else:
+                    padded_type = format_type(data[1]) + ' ' * (max_type_length - len(format_type(data[1])))
+                    message += f"[{padded_type}] {data[0]}"
                 symbols.append(message)
             symbols = '\n'.join(symbols)
         else:

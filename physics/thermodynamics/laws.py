@@ -10,12 +10,12 @@ class FirstLaw(Formula):
     """
     description = {
         r"\Delta U": ("Change in internal energy in Joules", float),
-        "Q": ("Energy supplied to the system as heat in Joules", float),
+        "q": ("Energy supplied to the system as heat in Joules", float),
         "W": ("Work done by the system in Joules", float)
     }
 
     def to_node(self) -> Equal:
-        return Symbol(r"\Delta U") == Symbol("Q") - Symbol("W")
+        return Symbol(r"\Delta U") == Symbol("q") - Symbol("W")
 
 
 class SpecificHeatCapacity(Formula):
@@ -24,14 +24,14 @@ class SpecificHeatCapacity(Formula):
     It states the energy as heat gained by the system equals the mass times the SHC times the change in temperature
     """
     description = {
-        "Q": ("The energy - as heat - gained by the system in Joules", float),
+        "q": ("The energy - as heat - gained by the system in Joules", float),
         "m": ("The mass of the system in Kilograms", float),
         "c": ("The specific heat capacity of the system in Joules per Kelvin per Kilogram", float),
         r"\Delta T": ("The change in temperature in Kelvin", float)
     }
 
     def to_node(self) -> Equal:
-        return Symbol("Q") == Symbol("m") * Symbol("c") * Symbol(r"\Delta T")
+        return Symbol("q") == Symbol("m") * Symbol("c") * Symbol(r"\Delta T")
 
 
 class HessLaw(Formula):

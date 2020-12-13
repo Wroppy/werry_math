@@ -8,9 +8,11 @@ class CannotEvalSymbol(Exception):
     def __init__(self, symbol: str):
         super(CannotEvalSymbol, self).__init__(f"cannot evaluate symbol {symbol}")
 
+
 class CannotEvalString(Exception):
     def __init__(self, string: str):
         super(CannotEvalString, self).__init__(f"cannot evaluate string {string}")
+
 
 class Node(ABC):
     contains_symbol: Optional[bool]
