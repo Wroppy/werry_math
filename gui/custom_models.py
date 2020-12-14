@@ -1,3 +1,6 @@
+"""
+Custom Models for QViews
+"""
 from PyQt5.QtCore import QSortFilterProxyModel, QAbstractTableModel, QModelIndex, Qt
 from typing import *
 

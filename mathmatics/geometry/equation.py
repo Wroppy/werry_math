@@ -1,3 +1,5 @@
+from typing import Union
+
 from mathmatics.geometry.quadratic import solve_quadratic
 from mathmatics.structures.equation import Equation
 from mathmatics.structures.vector import Vector2D
@@ -13,8 +15,8 @@ class ExponentialEquation(Equation):
     def y(self, x: float) -> float:
         return self.a * self.b ** x + self.c
 
-    def __str__(self):
-        return f"y = {self.a}*{self.b}^x+{self.c}"
+    def to_latex(self) -> Union[str, None]:
+        return f"{self.a}*{self.b}^x+{self.c}"
 
 
 class QuadraticEquation(Equation):
@@ -29,8 +31,8 @@ class QuadraticEquation(Equation):
     def x_intercepts(self) -> Vector2D:
         return solve_quadratic(self.a, self.b, self.c)
 
-    def __str__(self):
-        return f"y = {self.a}*x^2+{self.b}*x+{self.c}"
+    def to_latex(self) -> Union[str, None]:
+        return f"{self.a}*x^2+{self.b}*x+{self.c}"
 
 
 class LinearEquation(Equation):
@@ -38,11 +40,16 @@ class LinearEquation(Equation):
         self.m = m
         self.c = c
 
+    @staticmethod
+    def from_gradient_and_sample(m: float, sample: Vector2D):
+        c = sample.y - m * sample.x
+        return LinearEquation(m, c)
+
     def y(self, x: float) -> float:
         return self.m * x + self.c
 
-    def __str__(self):
-        return f"y = {self.m}*x+{self.c}"
+    def to_latex(self) -> Union[str, None]:
+        return f"{self.m}*x+{self.c}"
 
 
 if __name__ == '__main__':

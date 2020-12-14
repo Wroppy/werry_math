@@ -1,12 +1,21 @@
+import os
+import subprocess
 from abc import ABC, abstractmethod
 from typing import Callable, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
+import sympy
 
 from mathmatics.calculus.integral import integral
 from mathmatics.calculus.derivative import derivative
+from mathmatics.common import mpl_graph
 from mathmatics.structures.common import MathObject
+
+import tempfile
+
+from utilities.fs import open_file
+from utilities.latex import open_latex
+from utilities.markers import Proxy
 
 
 class Equation(MathObject, ABC):
@@ -25,24 +34,67 @@ class Equation(MathObject, ABC):
         pass
 
     def derivative(self, x: float) -> float:
+        """
+        Calculates the derivative of this equation at x
+
+        :param x: X
+        :return: The derivative
+        """
         return derivative(self.y, x)
 
     def integral(self, start: float, end: float) -> float:
+        """
+        Calculates the definite integral from start to end for this equation
+
+        :param start: Start
+        :param end: End
+        :return: The definite integral
+        """
         return integral(self.y, start, end)
 
     def to_latex(self) -> Union[str, None]:
-        return str(self)
+        """
+        Convert this equation to_latex
 
-    @abstractmethod
-    def __str__(self):
-        pass
+        :return:
+        """
+        return None
+
+    def print_latex(self, **kwargs):
+        """
+        Prints the latex of the equation
+
+        :return: None
+        """
+        latex = self.to_latex()
+        if latex is None:
+            print("LaTex not available for this equation")
+        else:
+            # todo: move this init to somewhere else
+            sympy.init_printing()
+            # todo: this does not print full latex
+            expr = sympy.sympify(latex, evaluate=False)
+            sympy.pprint(expr, use_unicode=True, **kwargs)
+
+    def open_latex(self):
+        latex = self.to_latex()
+        if latex is None:
+            print("LaTex not available for this equation")
+            return
+        open_latex(latex)
 
     def print_y(self, x: float):
+        """
+        Prints the equation evaluated at x
+
+        :param x: X
+        :return: None
+        """
         print(self.y(x))
 
     def graph(self, start: float = -5, end: float = 10, steps: float = 0.01):
         """
-        Graphs this equation
+        Graphs this equation from start to end
 
         :param start: Start x axis
         :param end: End x axis
@@ -52,16 +104,13 @@ class Equation(MathObject, ABC):
         xs = np.arange(start, end, steps)
         ys = []
         for x in xs:
-            ys.append(self.y(x))
+            try:
+                ys.append(self.y(x))
+            except Exception as e:
+                print(str(e))
+                ys.append(0.0)
 
-        fig, ax = plt.subplots()
-        # set center
-        ax.axhline(color='black', lw=0.5)
-        ax.axvline(color='black', lw=0.5)
-
-        # plot
-        ax.plot(xs, ys, 'b')
-        plt.show()
+        mpl_graph(xs, ys)
 
 
 class CustomEquation(Equation):
@@ -79,11 +128,11 @@ class CustomEquation(Equation):
     def to_latex(self) -> Union[str, None]:
         return self.latex
 
-    def __str__(self):
-        return f"y = function(x)"
+def test_graph():
+    CustomEquation(lambda x: x).graph()
 
 
 if __name__ == '__main__':
-    eq = CustomEquation(lambda x: 0.5 * x ** 2, "y=x^3")
-    eq.graph()
-
+    # eq = CustomEquation(lambda x: 0.5 * x ** 2, r"\int_{0}^{1} f(x) dx")
+    # eq.print_latex()
+    test_graph()

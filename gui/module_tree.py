@@ -1,3 +1,7 @@
+"""
+This file handles the module tree discovery logic
+I have yet to comment it but all it does is to create a QTreeView by scanning modules
+"""
 import importlib
 import inspect
 import os
@@ -7,6 +11,7 @@ from typing import *
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 
 from gui.common import type_to_str
+from gui.utilities.markers import Marker
 
 
 class CustomStandardItem(QStandardItem):
@@ -43,16 +48,30 @@ class TreeNode(ABC):
 
 
 class Variable(TreeNode, ABC):
+    # documentation string
     doc: str
 
     def to_import_path(self) -> str:
-        return ".".join(
-            os.path.join(self.parent.path[:-len(ModuleTree.file_extension)], self.name)[
-            len(self.get_root().path) + 1:].split(
-                os.path.sep))
+        """
+        import to_import_path
+        :return:
+        """
+        path = ".".join(os.path.join(self.parent.path, self.name)[len(self.get_root().path) + 1:].split(os.path.sep))
+        path = path.replace(ModuleTree.file_extension, '')
+        return path
 
-    def to_console_str(self) -> str:
-        return self.name
+    def to_import_str(self) -> str:
+        """
+        returns the import statement using to_import_path
+        :return:
+        """
+        path = self.to_import_path()
+        module = '.'.join(path.split('.')[:-1])
+        return f"from {module} import {self.name}"
+
+    @abstractmethod
+    def handleClicked(self, env: Dict[str, Any]) -> Tuple[Optional[str], str]:
+        pass
 
 
 class Function(Variable):
@@ -93,10 +112,20 @@ class Function(Variable):
         item.setToolTip(self.doc)
         return item
 
-    def to_console_str(self) -> str:
-        if not self.method:
-            return super(Function, self).to_console_str()
-        return f"{self.parent.to_console_str()}.{self.name}"
+    def handleClicked(self, env: Dict[str, Any]) -> Tuple[Optional[str], str]:
+        import_str = None
+        after = self.name
+        if self.method:
+            if self.parent.name not in env:
+                import_str = self.parent.to_import_str()
+                after = f"{self.parent.name}().{after}"
+            else:
+                after = '.' + after
+        else:
+            if self.name not in env:
+                import_str = self.to_import_str()
+
+        return import_str, after
 
     @staticmethod
     def match(parent: 'Module', name: str, path: str) -> List['Function']:
@@ -109,6 +138,10 @@ class Function(Variable):
         for fn_name, fn_callable in methods:
             if fn_callable.__module__ not in parent.to_import_prefix_str():
                 continue
+
+            if Marker.is_ignored(fn_callable):
+                continue
+
             results.append(Function(parent, fn_name, fn_callable))
         return results
 
@@ -140,6 +173,9 @@ class Class(Variable):
             if fn.__module__ not in self.parent.to_import_prefix_str():
                 continue
 
+            if Marker.is_ignored(fn):
+                continue
+
             function = Function(self, fn_name, fn, method=True)
             if fn_name == "__init__":
                 self.constructor = function
@@ -152,8 +188,16 @@ class Class(Variable):
             item.appendRow(node.to_model())
         return item
 
+    def handleClicked(self, env: Dict[str, Any]) -> Tuple[Optional[str], str]:
+        import_str = None
+        after = self.name
+        if self.name not in env:
+            import_str = self.to_import_str()
+        return import_str, after
+
     @staticmethod
     def match(parent: 'Module', name: str, path: str) -> List['Class']:
+
         spec = importlib.util.spec_from_file_location(name, path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -163,6 +207,10 @@ class Class(Variable):
         for cls_nam, cls in classes:
             if cls.__module__ not in parent.to_import_prefix_str():
                 continue
+
+            if Marker.is_ignored(cls):
+                continue
+
             cls = Class(parent, cls_nam, cls)
             cls.parse()
             results.append(cls)
@@ -185,23 +233,6 @@ class Module(TreeNode):
         self.nodes.extend(functions)
         classes = Class.match(self, name, self.path)
         self.nodes.extend(classes)
-        # with open(self.path, "r") as f:
-        #     content = str(f.readlines())
-        #     Function.match(content)
-        # for line in f.readlines():
-        #     if "def" in line and Function.match(line[:-2]):
-        #         line = line[:-2]
-        #         fn = Function(self, line)
-        #         self.nodes.append(fn)
-        # import importlib.util
-        # name = self.name[:-len(ModuleTree.file_extension)]
-        # spec = importlib.util.spec_from_file_location(name, self.path)
-        # module = importlib.util.module_from_spec(spec)
-        # spec.loader.exec_module(module)
-        # methods = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isfunction)))
-        # for fn_name, fn_callable in methods:
-        #     fn = Function(self, fn_name, fn_callable)
-        #     self.nodes.append(fn)
 
     def to_model(self) -> CustomStandardItem:
         item = CustomStandardItem(self, self.to_display_str())
@@ -251,7 +282,7 @@ class Package(TreeNode):
 
 
 class ModuleTree(TreeNode):
-    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'all', 'webserver', 'gui']
+    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'gui', 'cli', 'utils', 'release']
     ignored_files = ['__init__.py']
     file_extension = '.py'
 

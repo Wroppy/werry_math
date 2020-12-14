@@ -6,3 +6,7 @@
 /build/
 
 *.spec
+
+*.pik
+
+/release/
