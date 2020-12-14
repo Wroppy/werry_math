@@ -18,4 +18,9 @@ def open_file(filepath: str):
 
 
 def open_url(url: str):
+    """
+    opens url in the user's browser
+    :param url:
+    :return:
+    """
     webbrowser.open(url=url)

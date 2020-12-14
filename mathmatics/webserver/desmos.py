@@ -1,8 +1,7 @@
 import tempfile
-import webbrowser
 import pathlib
 
-from utils.fs import open_url
+from utilities.fs import open_url
 
 
 def start_desmos(equation: str = None):

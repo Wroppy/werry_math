@@ -2,6 +2,9 @@ from typing import Callable, Optional
 
 
 class Marker:
+    """
+    Marker that tells the gui to ignore scanning something
+    """
     attribute = "_ignored"
 
     @staticmethod
@@ -25,6 +28,9 @@ class ProxyPackage:
 
 
 class Proxy:
+    """
+    Allow running stuff in main thread
+    """
     # have to resort to this global state
     proxy_fn: Optional[Callable] = None
 

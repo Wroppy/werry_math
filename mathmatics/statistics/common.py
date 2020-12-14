@@ -3,7 +3,7 @@ import operator
 from typing import Union, List, Set, Tuple, Optional
 
 from mathmatics import sigma, np, Vector2D, LinearEquation, Ray2D
-from utils.markers import Marker
+from utilities.markers import Marker
 
 
 class DataSet:

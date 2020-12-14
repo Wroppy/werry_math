@@ -3,6 +3,9 @@ from typing import Dict, Optional
 
 
 class DisplayBundle:
+    """
+    Bundle that manages saving and loading data
+    """
     ext: str = '.pik'
     data: Dict
 

@@ -2,10 +2,15 @@ import tempfile
 
 import sympy
 
-from utils.fs import open_file
+from utilities.fs import open_file
 
 
 def open_latex(latex):
+    """
+    Create and open latex text
+    :param latex:
+    :return:
+    """
     with tempfile.NamedTemporaryFile('w', delete=False, suffix='.png') as f:
         path = f.name
         try:

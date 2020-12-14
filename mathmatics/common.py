@@ -1,6 +1,6 @@
 from typing import List
 
-from utils.markers import Proxy
+from utilities.markers import Proxy
 
 
 @Proxy.runInMainThread

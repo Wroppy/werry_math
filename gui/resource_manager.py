@@ -5,6 +5,9 @@ from PyQt5.QtGui import QFont, QFontDatabase, QIcon
 
 
 class ResourceManager:
+    """
+    This class manages the resources in the gui/resources folder
+    """
     root = os.path.dirname(os.path.realpath(__file__))
 
     default_resource_folder = {

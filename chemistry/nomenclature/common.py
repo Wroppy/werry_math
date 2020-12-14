@@ -1,4 +1,4 @@
-from utils.io import prompt_regex
+from utilities.io import prompt_regex
 
 acid_ext = [('hypo', 'ous'), ('', 'ous'), ('', 'ic'), ('per', 'ic')]
 anion_ext = [('hypo', 'ite'), ('', 'ite'), ('', 'ate'), ('per', 'ate')]

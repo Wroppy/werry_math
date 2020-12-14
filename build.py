@@ -1,3 +1,6 @@
+"""
+Build script to create a exe of the gui
+"""
 import os
 import subprocess
 import shutil
@@ -17,7 +20,8 @@ def confirm_or_quit(message):
             quit(0)
         print("input not Y or N")
 
-math_modules = ['chemistry', 'mathmatics', 'physics', 'utils']
+
+math_modules = ['chemistry', 'mathmatics', 'physics', 'utilities', 'libraries']
 target_folder = 'release'
 target_path = os.path.abspath(target_folder)
 script_path = os.path.dirname(os.path.realpath(__file__))
@@ -32,7 +36,6 @@ pyinstaller
 -y
 -i {os.path.join(script_path, 'gui', 'resources', 'favicon.ico')}
 --add-data {os.path.join(script_path, 'gui', 'resources')};gui\resources
---add-data {os.path.join(script_path, 'mathmatics', 'webserver')};mathmatics\webserver
 --hidden-import all.imports
 display.py
 """.strip().split('\n')

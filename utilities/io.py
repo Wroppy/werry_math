@@ -3,6 +3,13 @@ from typing import Optional
 
 
 def prompt_regex(prompt: str, regex: str, default: str = None) -> Optional[str]:
+    """
+    Opens a prompt with only accepts when regex matches
+    :param prompt:
+    :param regex:
+    :param default:
+    :return:
+    """
     if default is not None:
         message = f'{prompt}(default is {default}): [{regex}] '
     else:

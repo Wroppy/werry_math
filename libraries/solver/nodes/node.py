@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Optional, List, Any, Dict, Union
 
-from utils.latex import open_latex
+from utilities.latex import open_latex
 
 
 class CannotEvalSymbol(Exception):

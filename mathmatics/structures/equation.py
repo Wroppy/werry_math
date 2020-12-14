@@ -13,9 +13,9 @@ from mathmatics.structures.common import MathObject
 
 import tempfile
 
-from utils.fs import open_file
-from utils.latex import open_latex
-from utils.markers import Proxy
+from utilities.fs import open_file
+from utilities.latex import open_latex
+from utilities.markers import Proxy
 
 
 class Equation(MathObject, ABC):

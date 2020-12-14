@@ -2,13 +2,18 @@ from typing import Any, Callable
 
 
 def type_to_str(obj: Any):
-    callable = True
+    """
+    Return the custom string version of this type/variable
+    :param obj:
+    :return:
+    """
+    call = True
     try:
         obj = obj()
     except:
-        callable = False
+        call = False
 
-    if callable:
+    if call:
         if isinstance(obj, bool):
             return "bool"
         elif isinstance(obj, int):

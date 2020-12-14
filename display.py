@@ -267,10 +267,8 @@ def pre_display():
     QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 
     # set path
-    old = sys.path.pop()
     currentDir = os.path.dirname(os.path.realpath(__file__))
-    sys.path.append(os.path.realpath(currentDir))
-    sys.path.append(old)
+    sys.path.insert(0, os.path.realpath(currentDir))
 
 
 def post_display(app: QApplication):

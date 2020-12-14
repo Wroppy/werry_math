@@ -11,7 +11,7 @@ from typing import *
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 
 from gui.common import type_to_str
-from utils.markers import Marker
+from gui.utilities.markers import Marker
 
 
 class CustomStandardItem(QStandardItem):
@@ -119,7 +119,8 @@ class Function(Variable):
             if self.parent.name not in env:
                 import_str = self.parent.to_import_str()
                 after = f"{self.parent.name}().{after}"
-            after = '.' + after
+            else:
+                after = '.' + after
         else:
             if self.name not in env:
                 import_str = self.to_import_str()

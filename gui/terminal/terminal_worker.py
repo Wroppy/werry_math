@@ -7,7 +7,7 @@ from enum import Enum
 from PyQt5.QtCore import *
 
 from gui.hooks import ExceptionHooks
-from utils.markers import Proxy, ProxyPackage
+from gui.utilities.markers import Proxy, ProxyPackage
 
 
 class TerminalWorkerStatus(Enum):

@@ -3,7 +3,7 @@ from typing import List, Dict, Tuple, Callable, Any, Union, Optional
 
 from libraries.solver.nodes import Equal
 from libraries.solver.solver import Solver
-from utils.latex import open_latex
+from utilities.latex import open_latex
 
 
 class LatexOnlyFormula(Exception):
