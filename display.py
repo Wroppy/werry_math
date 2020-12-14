@@ -1,6 +1,4 @@
 import os
-import traceback
-from types import ModuleType
 from typing import Dict, Optional, List
 
 from PyQt5.QtCore import *
@@ -12,16 +10,40 @@ from cli.cli_parser import CLIParser
 from gui.common import type_to_str
 from gui.custom_models import CustomFilterModel, CustomTableModel
 from gui.display_bundle import DisplayBundle
+from gui.hooks import ExceptionHooks
 from gui.resource_manager import ResourceManager
 from gui.terminal.terminal_emulator import TerminalEmulator, TerminalStatus
 from gui.module_tree import CustomStandardItem, Function, ModuleTree, Class
 
 
 class Display(QMainWindow):
-    methodTree: QTreeView
+    """
+    The Display class handles displaying the gui
+    It contains all the docks and widgets
+    """
 
-    # static vars
+    # widgets----------------
+    # right dock tree view instance
+    methodsTreeView: QTreeView
+    # right dock widget
+    rightDockWidget: QDockWidget
+    # bottom dock widget
+    bottomDockWidget: QDockWidget
+    # table widget view
+    variablesTableView: QTableView
+    # custom filtering model
+    methodsTreeFilterModel: CustomFilterModel
+    # ----------------
+
+    # parser----------------
+    # CLIParser ignored flags
     ignoredModules = ["cdir", "spath"]
+    # used to represent the current script directory
+    cdir: str
+    # used to represent the history bundle save path
+    spath: str
+
+    # ----------------
 
     def __init__(self, parser: CLIParser, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,7 +56,7 @@ class Display(QMainWindow):
         icon = ResourceManager.load_icon("app/icon_trans.png")
         self.setWindowIcon(icon)
 
-        # parse args
+        # parse arguments
         parser.parse(Display.ignoredModules)
 
         # set current dir
@@ -51,8 +73,8 @@ class Display(QMainWindow):
         else:
             self.spath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'commands')
 
-        # setup console
-        self.console = TerminalEmulator("Started Python Interpreter")
+        # setup console and status
+        self.console = TerminalEmulator("Started Python Interpreter", parser.imports())
         self.console_status = QLabel(str(TerminalStatus.waiting.value))
         self.console_status.setAlignment(Qt.AlignRight)
         vbox = Display.createVLayout(self.console, self.console_status)
@@ -74,22 +96,19 @@ class Display(QMainWindow):
 
         self.show()
 
-        self.importModules(parser.imports())
-
         bundle = self.load()
         if bundle is not None:
             self.attempt_load(bundle)
 
-    def cleanUp(self):
-        self.console.cleanUp()
-
-    # Bundling #
     def to_display_bundle(self):
+        """
+        create a bundle with the display's state
+        :return:
+        """
         bundle = DisplayBundle()
         bundle.set('history', self.console.lines)
         return bundle
 
-    # Saving and Loading #
     def save(self):
         bundle = self.to_display_bundle()
         bundle.dump(self.spath)
@@ -97,9 +116,9 @@ class Display(QMainWindow):
     def load(self) -> Optional[DisplayBundle]:
         return DisplayBundle.load(self.spath)
 
-    # Attempt save and load
     def attempt_load(self, bundle):
-        reply = QMessageBox.question(self, 'Message', f'Load bundle from {self.spath}{DisplayBundle.ext}?', QMessageBox.Yes, QMessageBox.No)
+        reply = QMessageBox.question(self, 'Message', f'Load bundle from {self.spath}{DisplayBundle.ext}?',
+                                     QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.No:
             return
 
@@ -107,21 +126,16 @@ class Display(QMainWindow):
         self.console.executeCommands(history)
 
     def attempt_save(self):
-        reply = QMessageBox.question(self, 'Message', f'Save bundle to {self.spath}{DisplayBundle.ext}?', QMessageBox.Yes, QMessageBox.No)
+        reply = QMessageBox.question(self, 'Message', f'Save bundle to {self.spath}{DisplayBundle.ext}?',
+                                     QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.save()
 
     def closeEvent(self, event):
         self.attempt_save()
-        self.cleanUp()
+        self.console.cleanUp()
         super(Display, self).closeEvent(event)
 
-    # Import
-    def importModules(self, import_str: List[str]):
-        for string in import_str:
-            self.console.appendModule(string)
-
-    # Static
     def createDock(self, *args) -> QDockWidget:
         dock = QDockWidget(*args, parent=self)
         dock.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)
@@ -152,71 +166,71 @@ class Display(QMainWindow):
         self.console_status.setText(newStatus)
 
     def updateFilter(self, newFilter: str):
-        self.methodTreeFilter.setFilterRegExp(str(newFilter))
+        self.methodsTreeFilterModel.setFilterRegExp(str(newFilter))
         if len(str(newFilter)) == 0:
-            self.methodTree.expandToDepth(0)
+            self.methodsTreeView.expandToDepth(0)
         else:
-            self.methodTree.expandAll()
+            self.methodsTreeView.expandAll()
 
     def handleTreeSelect(self, index: QModelIndex):
-        model: QStandardItemModel = self.methodTree.model().sourceModel()
-        item: CustomStandardItem = model.itemFromIndex(self.methodTreeFilter.mapToSource(index))
+        model: QStandardItemModel = self.methodsTreeView.model().sourceModel()
+        item: CustomStandardItem = model.itemFromIndex(self.methodsTreeFilterModel.mapToSource(index))
         if item is None or (not isinstance(item.node, Function) and not isinstance(item.node, Class)):
             return
 
         self.console.writeFunction(item.node)
-        self.methodTree.setExpanded(index, not self.methodTree.isExpanded(index))
+        self.methodsTreeView.setExpanded(index, not self.methodsTreeView.isExpanded(index))
 
     # dock creations
     def createLeftDock(self):
-        dock = self.createDock("Helpers")
-        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+        pass
 
     def createRightDock(self):
         dock = self.createDock("Methods")
 
-        # create filter
+        # create filter input
         hbox = QHBoxLayout()
         hbox.setContentsMargins(0, 0, 0, 0)
         label = QLabel("Search")
-        self.methodTreeFilterLineEdit = QLineEdit()
-        self.methodTreeFilterLineEdit.textChanged.connect(self.updateFilter)
-        hbox = Display.createHLayout(label, self.methodTreeFilterLineEdit, hbox=hbox)
+        lineEdit = QLineEdit()
+        lineEdit.textChanged.connect(self.updateFilter)
+        hbox = Display.createHLayout(label, lineEdit, hbox=hbox)
 
         # create tree
-        self.methodTree = QTreeView(dock)
-        self.methodTree.setHeaderHidden(True)
+        self.methodsTreeView = QTreeView(dock)
+        self.methodsTreeView.setHeaderHidden(True)
 
         # add to display
-        vbox = Display.createVLayout(hbox, self.methodTree)
+        vbox = Display.createVLayout(hbox, self.methodsTreeView)
         dock.setWidget(vbox)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        self.rightDockWidget = dock
 
     def createBottomDock(self):
         dock = self.createDock("Variables")
 
         # create table
-        self.variableTable = QTableView(dock)
-        self.variableTable.setSortingEnabled(True)
+        self.variablesTableView = QTableView(dock)
+        self.variablesTableView.setSortingEnabled(True)
 
         # add to display
-        dock.setWidget(self.variableTable)
+        dock.setWidget(self.variablesTableView)
         self.addDockWidget(Qt.BottomDockWidgetArea, dock)
+        self.bottomDockWidget = dock
 
     # dock setups
     def setupRightDock(self):
+
         # setup tree
         moduleTree = ModuleTree(self.cdir)
         moduleTree.parse()
 
-        self.model = moduleTree.to_model()
+        self.methodsTreeFilterModel = CustomFilterModel()
+        self.methodsTreeFilterModel.setSourceModel(moduleTree.to_model())
 
-        self.methodTreeFilter = CustomFilterModel()
-        self.methodTreeFilter.setSourceModel(self.model)
-
-        self.methodTree.setModel(self.methodTreeFilter)
-        self.methodTree.doubleClicked.connect(self.handleTreeSelect)
-        self.methodTree.expandToDepth(0)
+        self.methodsTreeView.setModel(self.methodsTreeFilterModel)
+        self.methodsTreeView.doubleClicked.connect(self.handleTreeSelect)
+        self.methodsTreeView.expandToDepth(0)
 
     def setupBottomDock(self):
         # init variables
@@ -226,32 +240,19 @@ class Display(QMainWindow):
         pass
 
     def updateVariables(self, env: Dict[str, Optional[str]]):
-        self.data = []
-        empty = True
+        data = []
         for key in env:
             if key.startswith("__") and key.endswith("__"):
                 continue
-            val = env[key]
-            if isinstance(val, ModuleType):
-                continue
+            data.append([type_to_str(type(env[key])), key, str(env[key])])
 
-            try:
-                module = val.__module__
-                if module != '__console__':
-                    continue
-            except:
-                pass
-
-            self.data.append([type_to_str(type(env[key])), key, str(env[key])])
-            empty = False
-
-        if empty:
+        if len(data) == 0:
             return
 
-        model = CustomTableModel(["Type", "Name", "Value"], self.data)
-        self.variableTableFilter = CustomFilterModel()
-        self.variableTableFilter.setSourceModel(model)
-        self.variableTable.setModel(self.variableTableFilter)
+        model = CustomTableModel(["Type", "Name", "Value"], data)
+        tableFilter = CustomFilterModel()
+        tableFilter.setSourceModel(model)
+        self.variablesTableView.setModel(tableFilter)
 
 
 def pre_display():
@@ -270,6 +271,7 @@ def pre_display():
     currentDir = os.path.dirname(os.path.realpath(__file__))
     sys.path.append(os.path.realpath(currentDir))
     sys.path.append(old)
+
 
 def post_display(app: QApplication):
     # custom style
@@ -304,8 +306,9 @@ def post_display(app: QApplication):
     ))
 
 
-# TODO: Fix icon
 if __name__ == '__main__':
+    ExceptionHooks().add_hook(lambda *a, **k: QApplication.quit())
+
     pre_display()
 
     app = QApplication(sys.argv)
@@ -314,15 +317,5 @@ if __name__ == '__main__':
 
     p = CLIParser(sys.argv[1:])
 
-    display = None
-    try:
-        display = Display(p)
-        code = app.exec_()
-    except Exception as e:
-        sys.stdin = sys.__stdin__
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-        traceback.print_exc()
-        os._exit(1)
-
-    os._exit(0)
+    display = Display(p)
+    sys.exit(app.exec_())

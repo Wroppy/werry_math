@@ -8,3 +8,5 @@
 *.spec
 
 *.pik
+
+/release/

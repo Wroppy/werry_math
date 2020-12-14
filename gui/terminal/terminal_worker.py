@@ -6,6 +6,7 @@ from enum import Enum
 
 from PyQt5.QtCore import *
 
+from gui.hooks import ExceptionHooks
 from utils.markers import Proxy, ProxyPackage
 
 
@@ -32,6 +33,12 @@ class CustomConsole(InteractiveConsole):
         self.raw_input = super(CustomConsole, self).raw_input
         self.onStart.emit()
         return input('')
+
+    def runsource(self, source, filename="<input>", symbol="single"):
+        ExceptionHooks().disable()
+        super(CustomConsole, self).runsource(source, filename, symbol)
+        ExceptionHooks().enable()
+
 
 class TerminalWorker(QRunnable):
     # executing code
@@ -62,10 +69,6 @@ class TerminalWorker(QRunnable):
             self.interpreter.interact(banner="")
         except:
             pass
-        finally:
-            sys.stdin = sys.__stdin__
-            sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
 
     def write(self, message: str):
         self.signals.finished.emit((message, self.interpreter.locals))
@@ -74,6 +77,8 @@ class TerminalWorker(QRunnable):
         self.signals.waiting.emit()
         with self.wait_signal(self.newLine):
             pass
+        if self.line == 'quit()':
+            raise Exception
         self.signals.running.emit()
         if self.line == '':
             self.line = '\n'

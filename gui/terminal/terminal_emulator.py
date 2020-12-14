@@ -11,6 +11,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+from gui.hooks import ExceptionHooks
 from gui.module_tree import Variable, Class, Function
 from gui.resource_manager import ResourceManager
 from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus, ProxyPackage
@@ -47,6 +48,9 @@ class TerminalStatus(Enum):
 
 
 class TerminalEmulator(QTextEdit):
+    """
+    A customized python terminal emulator
+    """
     # static stuff
     prompt: str = ">> "
 
@@ -57,9 +61,10 @@ class TerminalEmulator(QTextEdit):
     status: TerminalStatus
     cursorIndex: int
     saved_line: str
-    modules = List[str]
+    cmds = List[str]
     lines: List[str]
     fontSize: int
+    worker: TerminalWorker
 
     # signals
     localsChanged: pyqtSignal = pyqtSignal(object)
@@ -67,8 +72,12 @@ class TerminalEmulator(QTextEdit):
 
     newLine: pyqtSignal = pyqtSignal(str)
 
-    def __init__(self, welcome_message: str = None, *args, **kwargs):
+    def __init__(self, welcome_message: str = None, cmds=None, *args, **kwargs):
         super(QTextEdit, self).__init__(*args, **kwargs)
+        if cmds is None:
+            self.cmds = []
+        else:
+            self.cmds = cmds
 
         self.setStyles()
 
@@ -79,14 +88,13 @@ class TerminalEmulator(QTextEdit):
         self.status = TerminalStatus.waiting
         self.cursorIndex = 0
         self.saved_line = ""
-        self.modules = []
         self.lines = []
 
         worker = TerminalWorker(self.newLine)
         worker.signals.finished.connect(lambda message: self.handleWorkerStatus(TerminalWorkerStatus.waiting, message))
         worker.signals.running.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.running))
         worker.signals.waiting.connect(lambda: self.handleWorkerStatus(TerminalWorkerStatus.waiting))
-        worker.signals.started.connect(self.loadModules)
+        worker.signals.started.connect(self.runCommands)
         worker.signals.proxy.connect(self.handleProxy)
         self.worker = worker
         QThreadPool().globalInstance().start(worker)
@@ -99,7 +107,7 @@ class TerminalEmulator(QTextEdit):
         self.selectionChanged.connect(self.handleSelectionChanged)
 
     def cleanUp(self):
-        self.newLine.emit('quit()')
+        self.newLine.emit("quit()")
 
     def setStyles(self):
         self.fontSize = 12
@@ -116,7 +124,6 @@ class TerminalEmulator(QTextEdit):
         self.setFontPointSize(size)
         self.setTextCursor(cursor)
 
-
     # Selections #
     def handleSelectionChanged(self):
         if self.isSelectionReadOnly():
@@ -131,17 +138,12 @@ class TerminalEmulator(QTextEdit):
 
     # Running Methods #
     def writeFunction(self, var: Variable):
-        import_path = var.to_import_path()
-        root = import_path.split('.')[0]
-        # TODO Fix this
-        if isinstance(var, Class) or (isinstance(var, Function) and not var.method):
-            lcs = self.worker.locals()
-            if var.name not in lcs:
-                if root not in lcs:
-                    self.executeCommand(f"from {root} import *", var.to_console_str())
-            else:
-                self.appendCurrentLine(f"{import_path}")
-
+        lcs = self.worker.locals()
+        import_string, after = var.handleClicked(lcs)
+        if import_string is not None:
+            self.executeCommand(import_string, after)
+        else:
+            self.appendCurrentLine(after)
         self.setFocus()
 
     def executeCommand(self, command: str, after_execute: str = None):
@@ -253,11 +255,8 @@ class TerminalEmulator(QTextEdit):
             self.setTerminalStatus(TerminalStatus.executing)
 
     # Module Handling #
-    def appendModule(self, module: str):
-        self.modules.append(module)
-
-    def loadModules(self):
-        self.executeCommands(self.modules)
+    def runCommands(self):
+        self.executeCommands(self.cmds)
 
     def wheelEvent(self, event: QWheelEvent):
         if event.modifiers() == Qt.ControlModifier:

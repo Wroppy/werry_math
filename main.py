@@ -1,6 +1,5 @@
 import code
 import sys
-from typing import List, Union
 
 from cli.cli_parser import CLIParser
 

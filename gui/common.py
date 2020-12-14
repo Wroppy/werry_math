@@ -28,5 +28,5 @@ def type_to_str(obj: Any):
         elif isinstance(obj, set):
             return "set"
     if isinstance(obj, Callable):
-        return "fn"
+        return "callable"
     return str(type(obj))
