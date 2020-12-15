@@ -41,5 +41,5 @@ def __eq__(self, other):
 
 if __name__ == '__main__':
     # eq = Number(7) == Number(1) * ((Number(2) + Number(3) * Number(7)) / Number(2))
-    # eq.open_latex()
+    # eq.open   _latex()
     pass
