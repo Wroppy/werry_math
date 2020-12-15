@@ -8,7 +8,7 @@ import sys
 
 from cli.cli_parser import CLIParser
 from gui.common import type_to_str
-from gui.custom_models import CustomFilterModel, CustomTableModel
+from gui.custom_models import CustomFilterModel, CustomTableModel, CustomTree
 from gui.display_bundle import DisplayBundle
 from gui.hooks import ExceptionHooks
 from gui.resource_manager import ResourceManager
@@ -24,7 +24,7 @@ class Display(QMainWindow):
 
     # widgets----------------
     # right dock tree view instance
-    methodsTreeView: QTreeView
+    methodsTreeView: CustomTree
     # right dock widget
     rightDockWidget: QDockWidget
     # bottom dock widget
@@ -106,7 +106,7 @@ class Display(QMainWindow):
         :return:
         """
         bundle = DisplayBundle()
-        bundle.set('history', self.console.lines)
+        bundle.set('history', self.console.lines[len(self.console.cmds):])
         return bundle
 
     def save(self):
@@ -166,9 +166,11 @@ class Display(QMainWindow):
         self.console_status.setText(newStatus)
 
     def updateFilter(self, newFilter: str):
-        self.methodsTreeFilterModel.setFilterRegExp(str(newFilter))
-        if len(str(newFilter)) == 0:
-            self.methodsTreeView.expandToDepth(0)
+        newFilter = str(newFilter)
+        self.methodsTreeView.setFilter(newFilter)
+        self.methodsTreeFilterModel.setFilterRegExp(newFilter)
+        if len(newFilter) == 0:
+            self.methodsTreeView.collapseAll()
         else:
             self.methodsTreeView.expandAll()
 
@@ -197,7 +199,7 @@ class Display(QMainWindow):
         hbox = Display.createHLayout(label, lineEdit, hbox=hbox)
 
         # create tree
-        self.methodsTreeView = QTreeView(dock)
+        self.methodsTreeView = CustomTree(dock)
         self.methodsTreeView.setHeaderHidden(True)
 
         # add to display
@@ -225,12 +227,12 @@ class Display(QMainWindow):
         moduleTree = ModuleTree(self.cdir)
         moduleTree.parse()
 
-        self.methodsTreeFilterModel = CustomFilterModel()
+        self.methodsTreeFilterModel = CustomFilterModel(parent=self.methodsTreeView)
         self.methodsTreeFilterModel.setSourceModel(moduleTree.to_model())
 
         self.methodsTreeView.setModel(self.methodsTreeFilterModel)
         self.methodsTreeView.doubleClicked.connect(self.handleTreeSelect)
-        self.methodsTreeView.expandToDepth(0)
+        self.methodsTreeView.collapseAll()
 
     def setupBottomDock(self):
         # init variables

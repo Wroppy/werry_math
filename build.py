@@ -4,6 +4,7 @@ Build script to create a exe of the gui
 import os
 import subprocess
 import shutil
+import sys
 
 
 def run_win_cmd(cmd):
@@ -21,6 +22,10 @@ def confirm_or_quit(message):
         print("input not Y or N")
 
 
+sep = ":"
+if sys.platform == "win32":
+    sep = ";"
+
 math_modules = ['chemistry', 'mathmatics', 'physics', 'utilities', 'libraries']
 target_folder = 'release'
 target_path = os.path.abspath(target_folder)
@@ -35,7 +40,7 @@ pyinstaller
 --distpath {os.path.join(target_path, 'dist')}
 -y
 -i {os.path.join(script_path, 'gui', 'resources', 'favicon.ico')}
---add-data {os.path.join(script_path, 'gui', 'resources')};gui\resources
+--add-data {os.path.join(script_path, 'gui', 'resources')}{sep}gui{os.path.sep}resources
 --hidden-import all.imports
 display.py
 """.strip().split('\n')
