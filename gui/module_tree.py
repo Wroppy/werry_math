@@ -11,7 +11,7 @@ from typing import *
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 
 from gui.common import type_to_str
-from gui.utilities.markers import Marker
+exec('from utilities.markers import Marker')
 
 
 class CustomStandardItem(QStandardItem):
@@ -46,6 +46,9 @@ class TreeNode(ABC):
             parent = parent.parent
         return parent
 
+    @staticmethod
+    def is_ignored(obj: Any) -> bool:
+        return eval("Marker.is_ignored(obj)")
 
 class Variable(TreeNode, ABC):
     # documentation string
@@ -139,7 +142,7 @@ class Function(Variable):
             if fn_callable.__module__ not in parent.to_import_prefix_str():
                 continue
 
-            if Marker.is_ignored(fn_callable):
+            if TreeNode.is_ignored(fn_callable):
                 continue
 
             results.append(Function(parent, fn_name, fn_callable))
@@ -173,7 +176,7 @@ class Class(Variable):
             if fn.__module__ not in self.parent.to_import_prefix_str():
                 continue
 
-            if Marker.is_ignored(fn):
+            if TreeNode.is_ignored(fn):
                 continue
 
             function = Function(self, fn_name, fn, method=True)
@@ -208,7 +211,7 @@ class Class(Variable):
             if cls.__module__ not in parent.to_import_prefix_str():
                 continue
 
-            if Marker.is_ignored(cls):
+            if TreeNode.is_ignored(cls):
                 continue
 
             cls = Class(parent, cls_nam, cls)

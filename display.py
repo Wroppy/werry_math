@@ -1,10 +1,17 @@
 import os
+import sys
+
+# set path
+currentDir = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.realpath(currentDir))
+# make debug module
+print(sys.path)
+
 from typing import Dict, Optional, List
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-import sys
 
 from cli.cli_parser import CLIParser
 from gui.common import type_to_str
@@ -166,6 +173,7 @@ class Display(QMainWindow):
         self.console_status.setText(newStatus)
 
     def updateFilter(self, newFilter: str):
+        self.methodsTreeView.clearSelection()
         newFilter = str(newFilter)
         self.methodsTreeView.setFilter(newFilter)
         self.methodsTreeFilterModel.setFilterRegExp(newFilter)
@@ -267,10 +275,6 @@ def pre_display():
     # hidpi
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-
-    # set path
-    currentDir = os.path.dirname(os.path.realpath(__file__))
-    sys.path.insert(0, os.path.realpath(currentDir))
 
 
 def post_display(app: QApplication):

@@ -7,7 +7,7 @@ from enum import Enum
 from PyQt5.QtCore import *
 
 from gui.hooks import ExceptionHooks
-from gui.utilities.markers import Proxy, ProxyPackage
+exec('from utilities.markers import Proxy, ProxyPackage')
 
 
 class TerminalWorkerStatus(Enum):
@@ -39,7 +39,6 @@ class CustomConsole(InteractiveConsole):
         super(CustomConsole, self).runsource(source, filename, symbol)
         ExceptionHooks().enable()
 
-
 class TerminalWorker(QRunnable):
     # executing code
     interpreter: InteractiveConsole
@@ -49,14 +48,14 @@ class TerminalWorker(QRunnable):
 
         self.event = threading.Event()
         self.signals = TerminalWorkerSignals()
-        Proxy.proxy_fn = self.proxy
+        exec('Proxy.proxy_fn = self.proxy')
         self.interpreter = CustomConsole(self.signals.started)
         self.line = ""
 
         self.newLine = newLine
 
     def proxy(self, fn, args, kwargs):
-        self.signals.proxy.emit(ProxyPackage(fn, args, kwargs))
+        self.signals.proxy.emit(eval('ProxyPackage(fn, args, kwargs)'))
 
     def locals(self):
         return self.interpreter.locals

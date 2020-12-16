@@ -36,10 +36,9 @@ class Proxy:
 
     @staticmethod
     def runInMainThread(fn):
-        if Proxy.proxy_fn is None:
-            return fn
-
         def wrapper(*args, **kwargs):
+            if Proxy.proxy_fn is None:
+                return fn(*args, **kwargs)
             return Proxy.proxy_fn(fn, args, kwargs)
 
         return wrapper
