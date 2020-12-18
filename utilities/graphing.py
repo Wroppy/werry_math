@@ -3,6 +3,12 @@ from typing import List, Callable
 from utilities.markers import Proxy
 import numpy as np
 
+def mpl() -> str:
+    return 'import matplotlib.pyplot as plt'
+
+def calc_bins(mi: float, ma: float, width: float):
+    return np.arange(mi, ma + width, width)
+
 
 def mpl_graph_fn(fn: Callable, start: float, end: float, dx: float = 0.1, **kwargs):
     xs = np.arange(start, end, dx)
@@ -20,7 +26,6 @@ def mpl_graph(xs: List[float], ys: List[float] = None, title: str = None, xlabel
     # set center
     ax.axhline(color='black', lw=0.5)
     ax.axvline(color='black', lw=0.5)
-
     # plot
     fn = getattr(ax, type)
     if ys is None:

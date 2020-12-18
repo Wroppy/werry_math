@@ -1,5 +1,6 @@
 import math
 import operator
+import random
 from typing import Union, List, Set, Tuple, Optional
 
 import numpy as np
@@ -7,6 +8,43 @@ import numpy as np
 from mathmatics.calculus.common import sigma
 from mathmatics.structures.line import Ray2D
 from mathmatics.structures.vector import Vector2D
+
+Dist = List[List[float]]
+DistF = List[List[float]]
+
+Data = List[float]
+
+
+def to_dist(distf: DistF) -> Dist:
+    xs = []
+    ys = []
+    for x, y in distf:
+        xs.append(x)
+        ys.append(y)
+    return [xs, ys]
+
+
+def to_distf(dist: Dist) -> DistF:
+    distf = []
+    for i in range(len(dist[0])):
+        distf.append([dist[0][i], dist[1][i]])
+    return distf
+
+
+def rand(mi: float = 0, ma: float = 1) -> float:
+    return mi + (ma - mi) * random.random()
+
+
+def rand_list(n: int = 10) -> List[float]:
+    final = []
+    for i in range(n):
+        final.append(rand())
+
+    total = sum(final)
+    for i in range(len(final)):
+        final[i] /= total
+
+    return final
 
 
 class DataSet:
@@ -125,6 +163,22 @@ def variance(data: List[float]) -> float:
     return _sum / _len
 
 
+def skew(data: List[float]) -> float:
+    _len = len(data)
+    _mean = mean(data)
+    _std = standard_deviation(data)
+    _sum = sigma(lambda i: ((data[i] - _mean)/_std) ** 3, 0, _len - 1)
+    return _sum / _len
+
+
+def kurtosis(data: List[float]) -> float:
+    _len = len(data)
+    _mean = mean(data)
+    _std = standard_deviation(data)
+    _sum = sigma(lambda i: ((data[i] - _mean)/_std) ** 4, 0, _len - 1)
+    return _sum / _len
+
+
 def sample_variance(data: List[float]) -> float:
     _len = len(data)
     _mean = mean(data)
@@ -232,6 +286,24 @@ def root_mean_square_error(data: List[List[float]], r_line: Ray2D = None):
     ys = data[1]
     n = len(xs)
     return math.sqrt(sigma(lambda i: (ys[i] - r_line.y(xs[i])) ** 2, 0, n - 1) / (n - 2))
+
+
+def weighted_mean(data: Dist) -> float:
+    final = 0
+    distf = to_distf(data)
+    for weight, prob in distf:
+        final += weight * prob
+    return final
+
+
+def weighted_variance(data: Dist) -> float:
+    _mean = weighted_mean(data)
+    return sigma(lambda n: data[1][n] * (data[0][n] - _mean) ** 2, 0, len(data[0]) - 1)
+
+
+def weighted_standard_deviation(data: Dist) -> float:
+    _variance = weighted_variance(data)
+    return math.sqrt(_variance)
 
 
 if __name__ == '__main__':

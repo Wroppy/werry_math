@@ -36,8 +36,9 @@ class CustomConsole(InteractiveConsole):
 
     def runsource(self, source, filename="<input>", symbol="single"):
         ExceptionHooks().disable()
-        super(CustomConsole, self).runsource(source, filename, symbol)
+        result = super().runsource(source, filename, symbol)
         ExceptionHooks().enable()
+        return result
 
 class TerminalWorker(QRunnable):
     # executing code
@@ -51,7 +52,6 @@ class TerminalWorker(QRunnable):
         exec('Proxy.proxy_fn = self.proxy')
         self.interpreter = CustomConsole(self.signals.started)
         self.line = ""
-
         self.newLine = newLine
 
     def proxy(self, fn, args, kwargs):
