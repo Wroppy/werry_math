@@ -1,3 +1,4 @@
+import functools
 from typing import Callable, Optional
 
 
@@ -36,6 +37,7 @@ class Proxy:
 
     @staticmethod
     def runInMainThread(fn):
+        @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             if Proxy.proxy_fn is None:
                 return fn(*args, **kwargs)

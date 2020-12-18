@@ -1,7 +1,10 @@
-import math
-from typing import List
+from typing import Tuple
 
-from mathmatics import sigma
+from libraries.solver.nodes.extension import *
+from libraries.structures.formula import Formula
+from mathmatics.calculus.common import sigma
+from mathmatics.statistics.common import choose
+from utilities.graphing import mpl_graph
 
 
 def bayes_theorem(pH: float, pEH: float, pnEH: float = None) -> float:
@@ -48,9 +51,89 @@ def p_variance(data: List[List[float]]) -> float:
         len(xs) - 1
     )
 
+
 def p_standard_deviation(data: List[List[float]]) -> float:
     return math.sqrt(p_variance(data))
 
 
+class Choose(AdvanceOperations):
+    precedence = 3
+
+    def eval(self) -> float:
+        total = int(self.left.eval())
+        pick = int(self.right.eval())
+        return choose(total, pick)
+
+    def to_latex(self) -> str:
+        return add_brackets(rf"{self.left.to_latex()} \choose {self.right.to_latex()}")
+
+
+class BinomialDistribution(Formula):
+    """
+    Calculates the binomial distribution
+    """
+    description = {
+        "P(n, k)": "The probability of k success in n trials",
+        "n": "Number of trials",
+        "k": "Number of success required",
+        "p": "Probability of success"
+    }
+
+    def to_node(self) -> Equal:
+        return Symbol("P(n, k)") == Choose(Symbol("n"), Symbol("k")) * Symbol("p") ** Symbol("k") * (
+                Number(1) - Symbol("p")) ** (Symbol("n") - Symbol("k"))
+
+    def draw(self, n: int, p: float):
+        ks, rs = self.to_data(n, p)
+
+        mpl_graph(ks, rs, type='plot')
+
+    def to_data(self, n: int, p: float) -> Tuple[List[float], List[float]]:
+        ks = list(range(0, n + 1))
+        rs = []
+        for k in ks:
+            rs.append(self.solvewhere(n=n, k=k, p=p))
+        return ks, rs
+
+
+class GeometricDistribution(Formula):
+    """
+    Solves the geometric distributions
+    """
+    description = {
+        'P(k; p)': "Probability for success on the kth trial",
+        "k": "Number of trials",
+        "p": "Probability of success"
+    }
+
+    def to_node(self) -> Equal:
+        return Symbol("P(k; p)") == (Number(1) - Symbol("p")) ** (Symbol("k") - Number(1)) * Symbol("p")
+
+    def draw(self, k: int, p: float):
+        ks, rs = self.to_data(k, p)
+        mpl_graph(ks, rs, type='plot')
+
+    def to_data(self, k: int, p: float) -> Tuple[List[float], List[float]]:
+        ks = list(range(1, k + 1))
+        rs = []
+        for k in ks:
+            rs.append(self.solvewhere(k=k, p=p))
+        return ks, rs
+
+    def cumulate(self, k: int, p: float):
+        return math.fsum(self.to_data(k, p)[1])
+
+
+def birthday_paradox(people: int) -> float:
+    days = 365
+    if people >= days:
+        return 1
+
+    final = 1
+    for i in range(people):
+        final *= (days-i)/days
+    return 1-final
+
 if __name__ == '__main__':
-    print(bayes_theorem(1 / 21, 0.4, 0.1))
+    BinomialDistribution().draw(40, 0.2)
+    # print(bayes_theorem(1 / 21, 0.4, 0.1))

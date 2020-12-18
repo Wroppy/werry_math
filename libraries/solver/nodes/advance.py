@@ -6,6 +6,7 @@ from libraries.solver.nodes import Operation, Node, Number, Constant
 
 
 class AdvanceOperations(Operation, ABC):
+    precedence = 2
     pass
 
 
@@ -40,6 +41,7 @@ class Root(AdvanceOperations):
 
         return rf"\sqrt{left}{right}"
 
+
 class SquareRoot(Root):
     def __init__(self, right: Node):
         super().__init__(Number(2), right)
@@ -51,7 +53,6 @@ class SquareRoot(Root):
         right = add_brackets(right)
 
         return rf"\sqrt{right}"
-
 
 
 class Logarithm(AdvanceOperations):

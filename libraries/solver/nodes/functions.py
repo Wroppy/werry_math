@@ -1,11 +1,13 @@
 import copy
+import math
 
 from libraries.solver.common import add_brackets
-from libraries.solver.nodes import Operation, Function, Node, Number, Equal
+from libraries.solver.nodes import Operation, Function, Node, Number, Equal, StableNode
 
 
 class CannotEvalPureFunctions(Exception):
     pass
+
 
 class Sum(Function):
     def __init__(self, function: Node, start: Equal = None, end: Node = None):
@@ -51,5 +53,20 @@ class Sum(Function):
         return base + func
 
 
-# if __name__ == '__main__':
-    # sig = Sum()
+class Factorial(Function):
+    precedence = 3
+
+    def __init__(self, node: Node):
+        super().__init__()
+        self.node = node
+        self.parameters = [node]
+
+    def eval(self) -> float:
+        result = int(self.node.eval())
+        return math.factorial(result)
+
+    def to_latex(self) -> str:
+        if isinstance(self.node, StableNode):
+            return f"({self.node.to_latex()})!"
+        return f"{self.node.to_latex()}!"
+

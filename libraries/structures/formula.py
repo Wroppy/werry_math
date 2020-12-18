@@ -93,6 +93,19 @@ symbols:
         solver = Solver(self.to_node())
         return solver.solvewhere(symbols, **kwargs)
 
+    def solve(self):
+        args = {}
+        for key in self.description:
+            desc = self.description[key]
+            result = input(f"{key}: ")
+            if len(result) == 0:
+                continue
+            try:
+                result = float(result)
+            except:
+                pass
+            args[key] = result
+        return self.solvewhere(symbols=args)
 
 if __name__ == '__main__':
     pass

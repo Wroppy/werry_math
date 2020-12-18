@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import *
 from gui.hooks import ExceptionHooks
 from gui.module_tree import Variable, Class, Function
 from gui.resource_manager import ResourceManager
-from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus, ProxyPackage
+from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus
 
 
 class TerminalCommand(ABC):
@@ -173,7 +173,7 @@ class TerminalEmulator(QTextEdit):
             current_line += after_execute
         self.saved_line = current_line
 
-    def handleProxy(self, package: ProxyPackage):
+    def handleProxy(self, package):
         package.call()
 
     @contextmanager

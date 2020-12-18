@@ -182,6 +182,14 @@ class Display(QMainWindow):
         else:
             self.methodsTreeView.expandAll()
 
+    def handleReturn(self):
+        indexes = self.methodsTreeView.highlighted_indexes
+        if len(indexes) != 1:
+            return
+
+        index = indexes.__iter__().__next__()
+        self.handleTreeSelect(index)
+
     def handleTreeSelect(self, index: QModelIndex):
         model: QStandardItemModel = self.methodsTreeView.model().sourceModel()
         item: CustomStandardItem = model.itemFromIndex(self.methodsTreeFilterModel.mapToSource(index))
@@ -204,6 +212,7 @@ class Display(QMainWindow):
         label = QLabel("Search")
         lineEdit = QLineEdit()
         lineEdit.textChanged.connect(self.updateFilter)
+        lineEdit.returnPressed.connect(self.handleReturn)
         hbox = Display.createHLayout(label, lineEdit, hbox=hbox)
 
         # create tree
@@ -263,6 +272,8 @@ class Display(QMainWindow):
         tableFilter = CustomFilterModel()
         tableFilter.setSourceModel(model)
         self.variablesTableView.setModel(tableFilter)
+        self.variablesTableView.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+
 
 
 def pre_display():
@@ -272,12 +283,16 @@ def pre_display():
         appid = "com.troppydash.werry_math"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appid)
 
-    # hidpi
-    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    # # hidpi
+    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    # QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 
 
 def post_display(app: QApplication):
+    app.setAttribute(Qt.AA_EnableHighDpiScaling)
+    if hasattr(QStyleFactory, 'AA_UseHighDpiPixmaps'):
+        app.setAttribute(Qt.AA_UseHighDpiPixmaps)
+
     # custom style
     app.setStyle("Fusion")
 

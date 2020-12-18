@@ -1,8 +1,11 @@
 QDockWidget {
     titlebar-normal-icon: icon();
+
 }
+
 QDockWidget::title {
     background-color: #24292b;
     padding: 6px;
     margin: 0;
 }
+

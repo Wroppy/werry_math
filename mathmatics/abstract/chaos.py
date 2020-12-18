@@ -1,8 +1,11 @@
-from mathmatics import mpl_graph, List, Set
+from typing import List
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 from mathmatics.common import translate
+from utilities.graphing import mpl_graph
+from utilities.markers import Proxy
 
 
 class LogisticMap:
@@ -63,6 +66,7 @@ class LogisticMap:
         return translate(self.n, 0.2, 0.8, 0, 1)
 
     @staticmethod
+    @Proxy.runInMainThread
     def graph_r(rl: float = 1.1, ru: float = 4, dr: float = 0.05, p0: float = 0.5):
         plt.xlabel('r')
         plt.ylabel('asy')

@@ -2,8 +2,11 @@ import math
 import operator
 from typing import Union, List, Set, Tuple, Optional
 
-from mathmatics import sigma, np, Vector2D, LinearEquation, Ray2D
-from utilities.markers import Marker
+import numpy as np
+
+from mathmatics.calculus.common import sigma
+from mathmatics.structures.line import Ray2D
+from mathmatics.structures.vector import Vector2D
 
 
 class DataSet:
@@ -48,6 +51,7 @@ def to_list(data: str, separator=' ') -> List[float]:
     for n in data.split(separator):
         result.append(float(n))
     return result
+
 
 # permutation
 def permutation(n: int, k: int) -> int:

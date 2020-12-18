@@ -3,7 +3,7 @@ from typing import Any, Optional, List, Dict
 
 from libraries.solver.common import *
 from libraries.solver.nodes import *
-from libraries.solver.plugins import Plugin, BasicPlugin, AdvancePlugin
+from libraries.solver.plugins import Plugin, BasicPlugin, AdvancePlugin, DecoratorPlugin
 
 
 class MoreThanOneUnknown(Exception):
@@ -16,7 +16,7 @@ class Solver:
         self.equation = equation
 
         if plugins is None:
-            plugins = [BasicPlugin(), AdvancePlugin()]
+            plugins = [BasicPlugin(), AdvancePlugin(), DecoratorPlugin()]
         self.plugins = plugins
 
         # state

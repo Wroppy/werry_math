@@ -15,6 +15,17 @@ class Plugin(ABC):
         pass
 
 
+class DecoratorPlugin(Plugin):
+
+    def match(self, symbol_side: Node) -> bool:
+        return isinstance(symbol_side, Decorator)
+
+    def balance(self, symbol: str, symbol_side: Node, other_side: Node) -> Tuple[Node, Node]:
+        operation: Decorator = symbol_side
+        new_symbol_side = operation.to_node()
+        return new_symbol_side, other_side
+
+
 class BasicPlugin(Plugin):
 
     def match(self, symbol_side: Node) -> bool:

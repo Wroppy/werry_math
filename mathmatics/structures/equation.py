@@ -1,5 +1,3 @@
-import os
-import subprocess
 from abc import ABC, abstractmethod
 from typing import Callable, Union
 
@@ -8,14 +6,11 @@ import sympy
 
 from mathmatics.calculus.integral import integral
 from mathmatics.calculus.derivative import derivative
-from mathmatics.common import mpl_graph
 from mathmatics.structures.common import MathObject
 
-import tempfile
 
-from utilities.fs import open_file
+from utilities.graphing import mpl_graph
 from utilities.latex import open_latex
-from utilities.markers import Proxy
 
 
 class Equation(MathObject, ABC):

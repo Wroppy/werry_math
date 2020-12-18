@@ -5,12 +5,14 @@ I have yet to comment it but all it does is to create a QTreeView by scanning mo
 import importlib
 import inspect
 import os
+import sys
 from abc import ABC, abstractmethod
 from typing import *
 
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 
 from gui.common import type_to_str
+
 exec('from utilities.markers import Marker')
 
 
@@ -50,6 +52,7 @@ class TreeNode(ABC):
     def is_ignored(obj: Any) -> bool:
         return eval("Marker.is_ignored(obj)")
 
+
 class Variable(TreeNode, ABC):
     # documentation string
     doc: str
@@ -78,7 +81,7 @@ class Variable(TreeNode, ABC):
 
 
 class Function(Variable):
-    def __init__(self, parent: TreeNode, name: str, fn: Any, method: bool = False):
+    def __init__(self, parent: TreeNode, name: str, fn: Any, method: bool = False, inherited: str = None):
         self.parent = parent
 
         self.path = os.path.join(parent.path, name)
@@ -102,15 +105,23 @@ class Function(Variable):
         else:
             self.doc = '\n'.join(filter(lambda x: len(x) != 0, [line.strip() for line in doc.split('\n')]))
         self.method = method
+        self.inherited = inherited
 
     def parse(self):
         pass
 
     def to_model(self) -> CustomStandardItem:
-        if len(self.ret) == 0:
-            to_str = f"FN {self.name}({self.args})"
+        to_str = f"{self.name}({self.args})"
+        if self.method:
+            to_str = f"MTD {to_str}"
         else:
-            to_str = f"FN {self.name}({self.args})->{self.ret}"
+            to_str = f"FN {to_str}"
+
+        if self.inherited is not None:
+            to_str = f"({self.inherited}) {to_str}"
+        if len(self.ret) != 0:
+            to_str += f"->{self.ret}"
+
         item = CustomStandardItem(self, to_str)
         item.setToolTip(self.doc)
         return item
@@ -173,16 +184,24 @@ class Class(Variable):
         result = inspect.getmembers(self.cls, predicate=inspect.isfunction)
 
         for fn_name, fn in result:
-            if fn.__module__ not in self.parent.to_import_prefix_str():
-                continue
-
             if TreeNode.is_ignored(fn):
                 continue
 
             function = Function(self, fn_name, fn, method=True)
             if fn_name == "__init__":
                 self.constructor = function
+            if fn.__module__ not in self.parent.to_import_prefix_str():
+                # mod = '.'.join(fn.__module__.split('.')[:-1])
+                # name = fn.__module__.split('.')[-1]
+                # try:
+                #     cls = getattr(importlib.import_module(mod), name).__name__
+                # except:
+                #     cls = name
+                function.inherited = fn.__module__
             self.nodes.append(function)
+
+        self.nodes.sort(key=lambda n: str(n.inherited))
+        self.nodes.sort(key=lambda n: n.inherited is not None)
 
     def to_model(self) -> CustomStandardItem:
         item = CustomStandardItem(self, f"CLS {self.name}")

@@ -179,6 +179,9 @@ class Decorator(Node, ABC):
         super(Decorator, self).__init__()
         self.node = node
 
+    def to_node(self) -> Node:
+        return self.node
+
     def modify(self, mod: Callable):
         self.node.modify(mod)
         self.node = mod(self, self.node)
@@ -188,7 +191,7 @@ class Decorator(Node, ABC):
 
 
 class Function(Node, ABC):
-    precedence: int
+    precedence: int = 3
     parameters: List[Node]
 
     def modify(self, mod: Callable):
