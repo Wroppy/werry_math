@@ -10,3 +10,5 @@
 *.pik
 
 /release/
+
+/sysroot-win-64/
