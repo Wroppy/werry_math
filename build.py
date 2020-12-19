@@ -5,6 +5,7 @@ import os
 import subprocess
 import shutil
 import sys
+exec('import PyInstaller')
 
 
 def run_win_cmd(cmd):
