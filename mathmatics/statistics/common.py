@@ -1,6 +1,7 @@
 import math
 import operator
 import random
+from statistics import NormalDist
 from typing import Union, List, Set, Tuple, Optional
 
 import numpy as np
@@ -167,7 +168,7 @@ def skew(data: List[float]) -> float:
     _len = len(data)
     _mean = mean(data)
     _std = standard_deviation(data)
-    _sum = sigma(lambda i: ((data[i] - _mean)/_std) ** 3, 0, _len - 1)
+    _sum = sigma(lambda i: ((data[i] - _mean) / _std) ** 3, 0, _len - 1)
     return _sum / _len
 
 
@@ -175,7 +176,7 @@ def kurtosis(data: List[float]) -> float:
     _len = len(data)
     _mean = mean(data)
     _std = standard_deviation(data)
-    _sum = sigma(lambda i: ((data[i] - _mean)/_std) ** 4, 0, _len - 1)
+    _sum = sigma(lambda i: ((data[i] - _mean) / _std) ** 4, 0, _len - 1)
     return _sum / _len
 
 
@@ -306,5 +307,38 @@ def weighted_standard_deviation(data: Dist) -> float:
     return math.sqrt(_variance)
 
 
+def ztable(z_score: float) -> float:
+    return NormalDist().cdf(z_score)
+
+
+def ztable_advance(mean: float, std: float, value: float) -> float:
+    return NormalDist(mean, std).cdf((value - mean) / std)
+
+
+def ztable_reverse(percent: float) -> float:
+    return NormalDist().inv_cdf(percent)
+
+
+def confidence_interval(s_mean: float, n: int, percent: float = 0.95) -> Tuple[float, float]:
+    bottom = ztable_reverse((1 - percent) / 2)
+    top = -bottom
+
+    s_std = (s_mean * (1 - s_mean) / n) ** 0.5
+    top_value = s_mean + top * s_std
+    bottom_value = s_mean + bottom * s_std
+
+    return bottom_value, top_value
+
+
+def confidence_interval_std(s_mean: float, n: int, s_std: float, percent: float = 0.95) -> Tuple[float, float]:
+    bottom = ztable_reverse((1 - percent) / 2)
+    top = -bottom
+
+    top_value = s_mean + top * s_std / n ** 0.5
+    bottom_value = s_mean + bottom * s_std / n ** 0.5
+
+    return bottom_value, top_value
+
+
 if __name__ == '__main__':
-    print(choose(3, 2))
+    print(confidence_interval_std(350, 30, 25, 0.9))

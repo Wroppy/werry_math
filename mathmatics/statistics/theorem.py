@@ -1,8 +1,9 @@
+from statistics import NormalDist
 from typing import List, Union
 
 from mathmatics.statistics.common import Dist, to_distf, rand, mean, rand_list, weighted_mean, \
     weighted_standard_deviation, standard_deviation, skew, kurtosis
-from utilities.graphing import mpl_graph, calc_bins
+from utilities.graphing import mpl_graph, calc_bins, mpl_graph_fn
 import numpy as np
 
 from utilities.markers import Proxy
@@ -41,33 +42,40 @@ def central_limit_theorem(dist: Union[Dist, int], s: int, times: int):
         m = mean(sample)
         sample_means.append(m)
 
-
     print(f"population mean: {weighted_mean(dist)}")
     print(f"population std: {weighted_standard_deviation(dist)}")
-    print(f"sampled mean distribution mean: {mean(sample_means)}")
-    print(f"sampled mean distribution std: {standard_deviation(sample_means)}")
-    print(f"sampled mean distribution skew: {skew(sample_means)}")
-    print(f"sampled mean distribution kurtosis: {kurtosis(sample_means)}")
+    print(f"expected sdsm mean {weighted_mean(dist)}")
+    print(f"expected sdsm std {weighted_standard_deviation(dist) / (s ** 0.5)}")
+    print(f"sdsm mean: {mean(sample_means)}")
+    print(f"sdsm std: {standard_deviation(sample_means)}")
+    print(f"sdsm skew: {skew(sample_means)}")
+    print(f"sdsm kurtosis: {kurtosis(sample_means)}")
 
     bins = calc_bins(-0.5 + min(dist[0]), max(dist[0]) + 0.5, 1)
 
     # https://matplotlib.org/3.3.0/gallery/statistics/hist.html#updating-histogram-colors
     fig, axs = plt.subplots(1, 2, tight_layout=True)
     N, bins, patches = axs[0].hist(sample_means, bins=bins)
-    fracs = N / N.max()
+    fracs = N / s
     norm = colors.Normalize(fracs.min(), fracs.max())
     for thisfrac, thispatch in zip(fracs, patches):
         color = plt.cm.viridis(norm(thisfrac))
         thispatch.set_facecolor(color)
 
-    axs[1].scatter(dist[0], dist[1])
+    axs[1].plot(dist[0], dist[1])
     axs[1].yaxis.set_major_formatter(PercentFormatter(xmax=1))
     fig.suptitle("Sampling distribution of the sample mean")
     plt.show()
 
 
+def sample_dist(p_mean: float, p_std: float, s_size: int):
+    s_mean = p_mean
+    s_std = p_std / s_size ** 0.5
+    print(f"sdsm mean: {s_mean}")
+    print(f"sdsm std: {s_std}")
+    mpl_graph_fn(NormalDist(s_mean, s_std).pdf, 0, 1, dx=0.001)
+
+
+
 if __name__ == '__main__':
-    n = 1000
-    s = 15
-    k = 50
-    central_limit_theorem(k, s, n)
+    sample_dist(0.56, 0.2, 100)

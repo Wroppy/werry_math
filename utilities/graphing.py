@@ -15,7 +15,7 @@ def mpl_graph_fn(fn: Callable, start: float, end: float, dx: float = 0.1, **kwar
     ys = []
     for x in xs:
         ys.append(fn(x))
-    mpl_graph(xs, ys, **kwargs)
+    mpl_graph(list(xs), ys, **kwargs)
 
 
 @Proxy.runInMainThread

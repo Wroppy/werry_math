@@ -1,6 +1,7 @@
 import math
 import os
 import sys
+import traceback
 from abc import ABC, abstractmethod
 from code import InteractiveInterpreter, InteractiveConsole
 from contextlib import contextmanager
@@ -15,6 +16,14 @@ from gui.hooks import ExceptionHooks
 from gui.module_tree import Variable, Class, Function
 from gui.resource_manager import ResourceManager
 from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus
+
+
+# https://stackoverflow.com/questions/4564559/get-exception-description-and-stack-trace-which-caused-an-exception-all-as-a-st
+def format_stacktrace():
+    parts = ["Traceback (most recent call last):\n"]
+    parts.extend(traceback.format_stack(limit=25)[:-2])
+    parts.extend(traceback.format_exception(*sys.exc_info())[1:])
+    return "".join(parts)[:-1]
 
 
 class TerminalCommand(ABC):
@@ -174,7 +183,13 @@ class TerminalEmulator(QTextEdit):
         self.saved_line = current_line
 
     def handleProxy(self, package):
-        package.call()
+        # have to manually handle it
+        ExceptionHooks().disable()
+        try:
+            package.call()
+        except:
+            print(format_stacktrace())
+        ExceptionHooks().enable()
 
     @contextmanager
     def wait_signal(self, loop):
@@ -198,7 +213,7 @@ class TerminalEmulator(QTextEdit):
     def currentLine(self):
         return self.toPlainText()[self.cursorIndex:]
 
-    def writeText(self, text: str):
+    def writeText(self, text: str, color: QColor = None):
         self.insertPlainText(text)
         self.moveCursorToTheEnd()
 
@@ -240,7 +255,7 @@ class TerminalEmulator(QTextEdit):
             is_prompt = True
             display = TerminalEmulator.prompt
             self.localsChanged.emit((variables))
-        self.writeText(display)
+        self.writeText(display, Qt.blue)
         if is_prompt:
             if len(self.saved_line) != 0:
                 self.appendCurrentLine(self.saved_line)

@@ -3,7 +3,6 @@ def describe(func):
     print(f"""{'-'*20}
 description for {func.__name__}
 doc: {func.__doc__}
-params: {func.__code__.co_varnames}
 params types: {func.__annotations__}
 {'-'*20}""")
 
