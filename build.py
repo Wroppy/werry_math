@@ -69,4 +69,9 @@ for module in math_modules:
     print(f'copying {module}')
     shutil.copytree(os.path.join(script_path, module), os.path.join(target_path, 'dist', module))
 
-print(f"Done, the files are at {os.path.join(target_path, 'dist', 'WerryMath')}")
+final_path = os.path.join(target_path, 'dist')
+print(f"Done, the files are at {final_path}")
+try:
+    os.startfile(final_path)
+except:
+    subprocess.Popen(['xdg-open', final_path])

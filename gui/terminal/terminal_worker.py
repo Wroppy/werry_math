@@ -55,18 +55,23 @@ class TerminalWorker(QRunnable):
 
         self.event = threading.Event()
         self.signals = TerminalWorkerSignals()
+
         try:
-            exec('from utilities.markers import Proxy, ProxyPackage')
+            exec('from utilities.markers import Proxy')
             exec('Proxy.proxy_fn = self.proxy')
-        except:
-            MessageHandler().emit("unable to import module 'Proxy'", MessageLevel.WARNING)
-            pass
+        except Exception as e:
+            MessageHandler().emit(f"unable to import module 'Proxy': {repr(e)}", MessageLevel.WARNING)
+
         self.interpreter = CustomConsole(self.signals.started)
         self.line = ""
         self.newLine = newLine
 
     def proxy(self, fn, args, kwargs):
-        self.signals.proxy.emit(eval('ProxyPackage(fn, args, kwargs)'))
+        try:
+            exec('from utilities.markers import ProxyPackage')
+            self.signals.proxy.emit(eval('ProxyPackage(fn, args, kwargs)'))
+        except Exception as e:
+            MessageHandler().emit(f"unable to import module 'ProxyPackage': {repr(e)}", MessageLevel.WARNING)
 
     def locals(self):
         return self.interpreter.locals
