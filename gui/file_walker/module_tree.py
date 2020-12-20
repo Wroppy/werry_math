@@ -5,61 +5,71 @@ I have yet to comment it but all it does is to create a QTreeView by scanning mo
 import importlib
 import inspect
 import os
-import sys
 from abc import ABC, abstractmethod
 from typing import *
 
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
+from PyQt5.QtGui import QStandardItemModel
 
-from gui.common import type_to_str
-
-exec('from utilities.markers import Marker')
-
-
-class CustomStandardItem(QStandardItem):
-    def __init__(self, node: 'TreeNode', *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setEditable(False)
-        self.node = node
+from gui.common import type_to_str, add_method_to
+from gui.file_walker.file_handle import get_classes_from_file, ImportException, get_functions_from_file
+from gui.file_walker.tree_node import TreeNode, CustomStandardItem
+from gui.message_handler import MessageHandler, MessageLevel
 
 
-class TreeNode(ABC):
-    parent: 'TreeNode'
-    name: str
-    path: str
+class ModuleTree(TreeNode):
+    """
+    ModuleTree: is the root of the TreeNode hierarchy
+    """
+    # folder to ignore
+    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'release']
+    # files to ignore
+    ignored_files = ['__init__.py']
+    # only files with this extension will be searched
+    file_extension = '.py'
 
-    def __str__(self):
-        return os.path.join(str(self.parent), self.name)
+    # first layer packages
+    packages: List[TreeNode]
 
-    @abstractmethod
+    def __init__(self, path: str):
+        self.packages = []
+        self.path = path
+
     def parse(self):
-        pass
+        for folder in next(os.walk(self.path))[1]:
+            if folder in ModuleTree.ignored_folders:
+                continue
+            package = Package(self, folder)
+            package.parse()
+            self.packages.append(package)
 
-    @abstractmethod
-    def to_model(self) -> CustomStandardItem:
-        pass
+    def to_model(self) -> QStandardItemModel:
+        root = QStandardItemModel()
+        root.invisibleRootItem()
+        for package in self.packages:
+            item = package.to_model()
+            root.appendRow(item)
+        return root
 
-    def to_display_str(self) -> str:
-        return self.name
 
-    def get_root(self) -> 'TreeNode':
-        parent = self.parent
-        while not isinstance(parent, ModuleTree):
+@add_method_to(TreeNode)
+def get_root(self) -> TreeNode:
+    parent = self.parent
+    while True:
+        try:
             parent = parent.parent
-        return parent
-
-    @staticmethod
-    def is_ignored(obj: Any) -> bool:
-        return eval("Marker.is_ignored(obj)")
+        except:
+            break
+    return parent
 
 
 class Variable(TreeNode, ABC):
-    # documentation string
+    # documentation
     doc: str
+    parent: 'Module'
 
     def to_import_path(self) -> str:
         """
-        import to_import_path
+        to_import_path: returns the python import path of this variable
         :return:
         """
         path = ".".join(os.path.join(self.parent.path, self.name)[len(self.get_root().path) + 1:].split(os.path.sep))
@@ -68,22 +78,39 @@ class Variable(TreeNode, ABC):
 
     def to_import_str(self) -> str:
         """
-        returns the import statement using to_import_path
+        to_import_str: returns the import statement using to_import_path
         :return:
         """
         path = self.to_import_path()
         module = '.'.join(path.split('.')[:-1])
         return f"from {module} import {self.name}"
 
+    def parse(self):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def match(parent: 'Module', name: str) -> List[TreeNode]:
+        """
+        match: returns a list of nodes give a python module
+        :param name: The python module name
+        :param parent: The python module node
+        """
+        pass
+
     @abstractmethod
     def handleClicked(self, env: Dict[str, Any]) -> Tuple[Optional[str], str]:
+        """
+        handleClicked: callback ran when the treenode is clicked
+        :param env: interpreter environment
+        :return: String to import, Text to render
+        """
         pass
 
 
 class Function(Variable):
     def __init__(self, parent: TreeNode, name: str, fn: Any, method: bool = False, inherited: str = None):
         self.parent = parent
-
         self.path = os.path.join(parent.path, name)
         self.name = name
 
@@ -106,9 +133,6 @@ class Function(Variable):
             self.doc = '\n'.join(filter(lambda x: len(x) != 0, [line.strip() for line in doc.split('\n')]))
         self.method = method
         self.inherited = inherited
-
-    def parse(self):
-        pass
 
     def to_model(self) -> CustomStandardItem:
         to_str = f"{self.name}({self.args})"
@@ -142,12 +166,8 @@ class Function(Variable):
         return import_str, after
 
     @staticmethod
-    def match(parent: 'Module', name: str, path: str) -> List['Function']:
-        spec = importlib.util.spec_from_file_location(name, path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        methods = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isfunction)))
-
+    def match(parent: 'Module', name: str) -> List['Function']:
+        methods = get_functions_from_file(name, parent.path)
         results = []
         for fn_name, fn_callable in methods:
             if fn_callable.__module__ not in parent.to_import_prefix_str():
@@ -162,7 +182,6 @@ class Function(Variable):
 
 class Class(Variable):
     nodes: List[Function]
-    parent: 'Module'
 
     def __init__(self, parent: 'Module', name: str, cls: Any):
         self.path = os.path.join(parent.path, name)
@@ -191,12 +210,6 @@ class Class(Variable):
             if fn_name == "__init__":
                 self.constructor = function
             if fn.__module__ not in self.parent.to_import_prefix_str():
-                # mod = '.'.join(fn.__module__.split('.')[:-1])
-                # name = fn.__module__.split('.')[-1]
-                # try:
-                #     cls = getattr(importlib.import_module(mod), name).__name__
-                # except:
-                #     cls = name
                 function.inherited = fn.__module__
             self.nodes.append(function)
 
@@ -218,43 +231,43 @@ class Class(Variable):
         return import_str, after
 
     @staticmethod
-    def match(parent: 'Module', name: str, path: str) -> List['Class']:
-
-        spec = importlib.util.spec_from_file_location(name, path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        classes = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isclass)))
+    def match(parent: 'Module', name: str) -> List['Class']:
+        classes = get_classes_from_file(name, parent.path)
 
         results = []
         for cls_nam, cls in classes:
             if cls.__module__ not in parent.to_import_prefix_str():
                 continue
-
             if TreeNode.is_ignored(cls):
                 continue
 
             cls = Class(parent, cls_nam, cls)
             cls.parse()
             results.append(cls)
-
         return results
 
 
 class Module(TreeNode):
     nodes: List[TreeNode]
+    has_error: bool
 
     def __init__(self, parent: TreeNode, name: str):
         self.nodes = []
         self.parent = parent
         self.name = name
         self.path = os.path.join(parent.path, name)
+        self.has_error = False
 
     def parse(self):
         name = self.name[:-len(ModuleTree.file_extension)]
-        functions = Function.match(self, name, self.path)
-        self.nodes.extend(functions)
-        classes = Class.match(self, name, self.path)
-        self.nodes.extend(classes)
+        try:
+            functions = Function.match(self, name)
+            self.nodes.extend(functions)
+            classes = Class.match(self, name)
+            self.nodes.extend(classes)
+        except ImportException:
+            MessageHandler().emit(f"unable to import python module: {self.name}", MessageLevel.WARNING)
+            self.has_error = True
 
     def to_model(self) -> CustomStandardItem:
         item = CustomStandardItem(self, self.to_display_str())
@@ -267,6 +280,12 @@ class Module(TreeNode):
             os.path.join(self.path[:-len(ModuleTree.file_extension)])[len(self.get_root().path) + 1:].split(
                 os.path.sep))
 
+    def to_display_str(self) -> str:
+        string = super(Module, self).to_display_str()
+        if self.has_error:
+            string = "ERR " + string
+        return string
+
 
 class Package(TreeNode):
     nodes: List[TreeNode]
@@ -278,58 +297,25 @@ class Package(TreeNode):
         self.path = os.path.join(parent.path, name)
 
     def parse(self):
-        folders = list(filter(lambda f: f not in ModuleTree.ignored_folders, next(os.walk(self.path))[1]))
-        if len(folders) == 0:
-            for file in next(os.walk(self.path))[2]:
-                if not file.endswith(ModuleTree.file_extension):
-                    continue
-                if file in ModuleTree.ignored_files:
-                    continue
-                module = Module(self, file)
-                module.parse()
-                self.nodes.append(module)
-        else:
-            for folder in folders:
-                if folder in ModuleTree.ignored_folders:
-                    continue
-                package = Package(self, folder)
-                package.parse()
-                self.nodes.append(package)
+        result = next(os.walk(self.path))
+        for folder in result[1]:
+            if folder in ModuleTree.ignored_folders:
+                continue
+            package = Package(self, folder)
+            package.parse()
+            self.nodes.append(package)
+
+        for file in result[2]:
+            if not file.endswith(ModuleTree.file_extension):
+                continue
+            if file in ModuleTree.ignored_files:
+                continue
+            module = Module(self, file)
+            module.parse()
+            self.nodes.append(module)
 
     def to_model(self) -> CustomStandardItem:
         item = CustomStandardItem(self, self.to_display_str())
         for node in self.nodes:
             item.appendRow(node.to_model())
         return item
-
-
-class ModuleTree(TreeNode):
-    ignored_folders = ['.idea', 'venv', '.git', '__pycache__', 'release']
-    ignored_files = ['__init__.py']
-    file_extension = '.py'
-
-    packages: List[Package]
-
-    def __init__(self, path: str):
-        self.packages = []
-        self.path = path
-
-    def __str__(self):
-        return self.path
-
-    def parse(self):
-        for folder in next(os.walk(self.path))[1]:
-            if folder in ModuleTree.ignored_folders:
-                continue
-            package = Package(self, folder)
-            package.parse()
-            self.packages.append(package)
-
-    def to_model(self) -> QStandardItemModel:
-        root = QStandardItemModel()
-        root.invisibleRootItem()
-        for package in self.packages:
-            item = package.to_model()
-            root.appendRow(item)
-
-        return root

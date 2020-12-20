@@ -1,9 +1,7 @@
 import math
-import os
 import sys
 import traceback
 from abc import ABC, abstractmethod
-from code import InteractiveInterpreter, InteractiveConsole
 from contextlib import contextmanager
 from enum import Enum
 from typing import List, Union, Tuple
@@ -12,8 +10,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from gui.hooks import ExceptionHooks
-from gui.module_tree import Variable, Class, Function
+from gui.exeception_hook import ExceptionHooks
+from gui.file_walker.module_tree import Variable
 from gui.resource_manager import ResourceManager
 from gui.terminal.terminal_worker import TerminalWorker, TerminalWorkerStatus
 

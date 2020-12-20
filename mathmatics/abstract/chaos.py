@@ -17,6 +17,7 @@ class LogisticMap:
             self.n = p0
             for _ in range(5):
                 self.next_float()
+        self.n = p0
 
     def n_plus_one(self, n: float) -> float:
         return self.r * n * (1 - n)

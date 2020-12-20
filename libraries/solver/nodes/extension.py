@@ -1,13 +1,5 @@
+from gui.common import add_method_to
 from libraries.solver.nodes import *
-
-
-# https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
-def add_method_to(cls):
-    def decorator(func):
-        setattr(cls, func.__name__, func)
-        return None
-
-    return decorator
 
 
 @add_method_to(Node)

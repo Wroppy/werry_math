@@ -76,10 +76,11 @@ class CLIParser:
         if ignored_modules is None:
             ignored_modules = []
 
-        if len(self.flags) > 0:
+        if len(self.flags) > 0 and ignored_modules == self.ignored_modules:
             return self.flags
 
-        self.ignored_modules = ignored_modules
+        self.flags = []
+        self.ignored_modules.extend(ignored_modules)
         for arg in self.args:
             if CLIParser.separator in arg:
                 k, v = arg.split(CLIParser.separator)

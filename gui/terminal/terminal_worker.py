@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 from code import InteractiveConsole
@@ -6,8 +7,12 @@ from enum import Enum
 
 from PyQt5.QtCore import *
 
-from gui.hooks import ExceptionHooks
-exec('from utilities.markers import Proxy, ProxyPackage')
+from gui.exeception_hook import ExceptionHooks
+from gui.message_handler import MessageHandler, MessageLevel
+
+
+class ExitException(Exception):
+    pass
 
 
 class TerminalWorkerStatus(Enum):
@@ -40,6 +45,7 @@ class CustomConsole(InteractiveConsole):
         ExceptionHooks().enable()
         return result
 
+
 class TerminalWorker(QRunnable):
     # executing code
     interpreter: InteractiveConsole
@@ -49,7 +55,12 @@ class TerminalWorker(QRunnable):
 
         self.event = threading.Event()
         self.signals = TerminalWorkerSignals()
-        exec('Proxy.proxy_fn = self.proxy')
+        try:
+            exec('from utilities.markers import Proxy, ProxyPackage')
+            exec('Proxy.proxy_fn = self.proxy')
+        except:
+            MessageHandler().emit("unable to import module 'Proxy'", MessageLevel.WARNING)
+            pass
         self.interpreter = CustomConsole(self.signals.started)
         self.line = ""
         self.newLine = newLine
@@ -65,9 +76,16 @@ class TerminalWorker(QRunnable):
         sys.stdout = self
         sys.stderr = self
         try:
+            ExceptionHooks().add_hook(lambda *args: os._exit(1))
             self.interpreter.interact(banner="")
-        except:
-            pass
+        except ExitException as e:
+            MessageHandler().emit(f"exiting interpreter: {repr(e)}", MessageLevel.INFO)
+        except Exception as e:
+            MessageHandler().emit(f"exception in interpreter: {repr(e)}")
+        MessageHandler().emit("interpreter stopped", MessageLevel.INFO)
+        sys.stdin = sys.__stdin__
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
 
     def write(self, message: str):
         self.signals.finished.emit((message, self.interpreter.locals))
@@ -77,7 +95,7 @@ class TerminalWorker(QRunnable):
         with self.wait_signal(self.newLine):
             pass
         if self.line == 'quit()':
-            raise Exception
+            raise ExitException(f'received {self.line}')
         self.signals.running.emit()
         if self.line == '':
             self.line = '\n'

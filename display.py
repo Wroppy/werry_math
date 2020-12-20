@@ -1,13 +1,8 @@
 import os
 import sys
+import subprocess
 
-# set path
-currentDir = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.realpath(currentDir))
-# make debug module
-print(sys.path)
-
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -15,12 +10,14 @@ from PyQt5.QtWidgets import *
 
 from cli.cli_parser import CLIParser
 from gui.common import type_to_str
-from gui.custom_models import CustomFilterModel, CustomTableModel, CustomTree
+from gui.custom.custom_models import CustomFilterModel, CustomTableModel
+from gui.custom.custom_widgets import CustomTree
 from gui.display_bundle import DisplayBundle
-from gui.hooks import ExceptionHooks
+from gui.exeception_hook import ExceptionHooks
+from gui.message_handler import MessageHandler, MessageLevel
 from gui.resource_manager import ResourceManager
 from gui.terminal.terminal_emulator import TerminalEmulator, TerminalStatus
-from gui.module_tree import CustomStandardItem, Function, ModuleTree, Class
+from gui.file_walker.module_tree import CustomStandardItem, Function, ModuleTree, Class
 
 
 class Display(QMainWindow):
@@ -275,7 +272,6 @@ class Display(QMainWindow):
         self.variablesTableView.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
 
 
-
 def pre_display():
     # fix windows icon not displaying
     if sys.platform == "win32":
@@ -283,9 +279,34 @@ def pre_display():
         appid = "com.troppydash.werry_math"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appid)
 
-    # # hidpi
-    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-    # QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    # set current directory as path
+    currentDir = os.path.dirname(os.path.realpath(__file__))
+    sys.path.insert(0, os.path.realpath(currentDir))
+
+    # add python if exists
+    pythonlib_paths = []
+    if sys.platform == "win32":
+        python_path = subprocess.check_output("where python", shell=True).strip()
+        try:
+            python_path = python_path.decode('utf-8').split(os.linesep)[0]
+            base = os.path.dirname(python_path)
+
+            pythonlib_paths.append(base)
+            pythonlib_paths.append(os.path.join(base, 'lib'))
+            pythonlib_paths.append(os.path.join(base, 'DLLs'))
+        except Exception as e:
+            MessageHandler().emit(str(e))
+    else:
+        MessageHandler().emit(f"unable to import python on current platform {sys.platform}")
+
+    if len(pythonlib_paths) != 0:
+        for path in pythonlib_paths:
+            if path not in sys.path:
+                sys.path.insert(0, path)
+    MessageHandler().emit(str(sys.path), MessageLevel.DEBUG)
+
+    # register exception hook
+    ExceptionHooks().add_hook(lambda *a, **k: QApplication.quit())
 
 
 def post_display(app: QApplication):
@@ -326,15 +347,27 @@ def post_display(app: QApplication):
 
 
 if __name__ == '__main__':
-    ExceptionHooks().add_hook(lambda *a, **k: QApplication.quit())
+    """
+    Flags:
+    spath
+    cdir
+    lvl
+    """
+    p = CLIParser(sys.argv[1:])
+    p.parse(['lvl'])
+
+    flag, exist = p.contains('lvl')
+    level = None
+    if exist:
+        level = MessageLevel.from_str(flag.value)
+        MessageHandler(level).emit(f"message handler started with level: {flag.value}", MessageLevel.INFO)
 
     pre_display()
-
     app = QApplication(sys.argv)
-
     post_display(app)
 
-    p = CLIParser(sys.argv[1:])
-
     display = Display(p)
-    sys.exit(app.exec_())
+
+    code = app.exec_()
+    MessageHandler().emit(f"application finished with code {code}", MessageLevel.INFO)
+    sys.exit(code)
