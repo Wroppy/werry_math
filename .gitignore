@@ -16,3 +16,5 @@
 /build-win-64/
 
 *.csv
+
+/pythonlib/
