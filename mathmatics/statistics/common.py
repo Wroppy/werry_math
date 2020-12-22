@@ -1,10 +1,12 @@
 import math
 import operator
 import random
+import urllib.request
 from statistics import NormalDist
 from typing import Union, List, Set, Tuple, Optional
 
 import numpy as np
+from scipy import stats
 
 from mathmatics.calculus.common import sigma
 from mathmatics.structures.line import Ray2D
@@ -319,6 +321,10 @@ def ztable_reverse(percent: float) -> float:
     return NormalDist().inv_cdf(percent)
 
 
+def zstar(percent: float) -> float:
+    return abs(ztable_reverse((1 - percent) / 2))
+
+
 def confidence_interval(s_mean: float, n: int, percent: float = 0.95) -> Tuple[float, float]:
     bottom = ztable_reverse((1 - percent) / 2)
     top = -bottom
@@ -340,5 +346,25 @@ def confidence_interval_std(s_mean: float, n: int, s_std: float, percent: float 
     return bottom_value, top_value
 
 
+def ttable(t_score: float, n: int):
+    return stats.t.cdf(t_score, n)
+
+
+def ttable_reverse(percent: float, n: int):
+    return stats.t.ppf(percent, n - 1)
+
+
+def tstar(percentage: float, n: int):
+    return abs(ttable_reverse((1 - percentage) / 2, n))
+
+
+def confidence_interval_mean(s_mean: float, n: int, s_std: float, percent: float = 0.95) -> Tuple[float, float]:
+    t_star = tstar(percent, n - 1)
+
+    interval = t_star * s_std / n ** 0.5
+
+    return s_mean - interval, s_mean + interval
+
+
 if __name__ == '__main__':
-    print(confidence_interval_std(350, 30, 25, 0.9))
+    print(ttable(0.9, 60))

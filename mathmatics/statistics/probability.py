@@ -3,7 +3,7 @@ from typing import Tuple
 from libraries.solver.nodes.extension import *
 from libraries.structures.formula import Formula
 from mathmatics.calculus.common import sigma
-from mathmatics.statistics.common import choose
+from mathmatics.statistics.common import choose, ztable
 from utilities.graphing import mpl_graph
 
 
@@ -131,8 +131,18 @@ def birthday_paradox(people: int) -> float:
 
     final = 1
     for i in range(people):
-        final *= (days-i)/days
-    return 1-final
+        final *= (days - i) / days
+    return 1 - final
+
+
+def p_value(p: float, s: int, np: float):
+    std = (p * (1 - p) / s) ** 0.5
+    return ztable((np - p) / std)
+
+
+def p_value_std():
+    pass
+
 
 if __name__ == '__main__':
     BinomialDistribution().draw(40, 0.2)

@@ -42,3 +42,4 @@ class CustomTableModel(QAbstractTableModel):
                 return str(self.header[section])
             else:
                 return super(CustomTableModel, self).headerData(section, orientation, role)
+

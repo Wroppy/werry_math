@@ -2,7 +2,7 @@ import os
 import sys
 import subprocess
 
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -10,9 +10,10 @@ from PyQt5.QtWidgets import *
 
 from cli.cli_parser import CLIParser
 from gui.common import type_to_str
-from gui.custom.custom_models import CustomFilterModel, CustomTableModel
-from gui.custom.custom_widgets import CustomTree
+from gui.custom_items.custom_models import CustomFilterModel, CustomTableModel
+from gui.custom_items.custom_widgets import CustomTree
 from gui.display_bundle import DisplayBundle
+from gui.dock.base_dock import BaseDock
 from gui.exeception_hook import ExceptionHooks
 from gui.message_handler import MessageHandler, MessageLevel
 from gui.resource_manager import ResourceManager
@@ -27,6 +28,8 @@ class Display(QMainWindow):
     """
 
     # widgets----------------
+    docks: List[BaseDock]
+
     # right dock tree view instance
     methodsTreeView: CustomTree
     # right dock widget
@@ -198,7 +201,38 @@ class Display(QMainWindow):
 
     # dock creations
     def createLeftDock(self):
+        # TODO: Abstract dock creation
         pass
+        # dock = self.createDock('Canvas')
+        #
+        # label = QLabel()
+        # canvas = QPixmap(400, 400)
+        # canvas.fill(Qt.white)
+        # label.setPixmap(canvas)
+        # with open('data.csv', 'r+') as f:
+        #      import csv
+        #      reader = csv.reader(f)
+        #      i = 1
+        #
+        #      for row in reader:
+        #          x = row[0]
+        #          z = row[2]
+        #
+        #          painter = QPainter(label.pixmap())
+        #          pen = QPen()
+        #          pen.setWidth(i)
+        #          if i > 10:
+        #              break
+        #          i += 0.01
+        #          painter.setPen(pen)
+        #          painter.drawPoint(200+float(x)*200, 200-float(z)*200)
+        #          painter.end()
+        #
+        #
+        # label.update()
+        #
+        # dock.setWidget(label)
+        # self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
     def createRightDock(self):
         dock = self.createDock("Methods")
@@ -286,23 +320,23 @@ def pre_display():
     # add python if exists
     pythonlib_paths = []
     if sys.platform == "win32":
-        python_path = subprocess.check_output("where python", shell=True).strip()
-        try:
-            python_path = python_path.decode('utf-8').split(os.linesep)[0]
-            base = os.path.dirname(python_path)
-
-            pythonlib_paths.append(base)
-            pythonlib_paths.append(os.path.join(base, 'lib'))
-            pythonlib_paths.append(os.path.join(base, 'DLLs'))
-        except Exception as e:
-            MessageHandler().emit(str(e))
+        python_path = subprocess.check_output("python -c \"import sys;print(sys.path)\"", shell=True).strip()
+        python_path = python_path.decode('utf-8')
+        if r'Microsoft\WindowsApps' not in python_path:
+            try:
+                paths = eval(python_path)
+                paths = filter(lambda x: len(x) > 0, paths)
+                pythonlib_paths.extend(paths)
+            except Exception as e:
+                MessageHandler().emit(str(e))
+        MessageHandler().emit(f"found python with: {python_path}", MessageLevel.DEBUG)
     else:
         MessageHandler().emit(f"unable to import python on current platform {sys.platform}")
 
     if len(pythonlib_paths) != 0:
         for path in pythonlib_paths:
             if path not in sys.path:
-                sys.path.insert(0, path)
+                sys.path.append(path)
     MessageHandler().emit(str(sys.path), MessageLevel.DEBUG)
 
     # register exception hook

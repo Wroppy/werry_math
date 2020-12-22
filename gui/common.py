@@ -1,5 +1,5 @@
 from typing import Any, Callable, Dict, Set
-
+from PyQt5.QtWidgets import *
 
 # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
 def add_method_to(cls):
@@ -68,3 +68,25 @@ def type_to_str(obj: Any):
     if isinstance(obj, Callable):
         return "callable"
     return str(type(obj))
+
+
+class WidgetHelper:
+    @staticmethod
+    def createVLayout(*args: QWidget, vbox: QVBoxLayout = None) -> QWidget:
+        if vbox is None:
+            vbox = QVBoxLayout()
+        for widget in args:
+            vbox.addWidget(widget)
+        w = QWidget()
+        w.setLayout(vbox)
+        return w
+
+    @staticmethod
+    def createHLayout(*args: QWidget, hbox: QHBoxLayout = None) -> QWidget:
+        if hbox is None:
+            hbox = QHBoxLayout()
+        for widget in args:
+            hbox.addWidget(widget)
+        w = QWidget()
+        w.setLayout(hbox)
+        return w

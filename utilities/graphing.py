@@ -2,9 +2,12 @@ from typing import List, Callable
 
 from utilities.markers import Proxy
 import numpy as np
+import csv
+
 
 def mpl() -> str:
     return 'import matplotlib.pyplot as plt'
+
 
 def calc_bins(mi: float, ma: float, width: float):
     return np.arange(mi, ma + width, width)

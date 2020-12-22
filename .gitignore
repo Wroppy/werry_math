@@ -14,3 +14,5 @@
 /sysroot-win-64/
 
 /build-win-64/
+
+*.csv

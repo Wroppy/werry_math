@@ -4,6 +4,7 @@ from typing import List, Dict, Tuple, Callable, Any, Union, Optional
 from libraries.solver.nodes import Equal
 from libraries.solver.solver import Solver
 from utilities.latex import open_latex
+import sympy
 
 
 class LatexOnlyFormula(Exception):
@@ -82,6 +83,12 @@ symbols:
             print("LaTex not available for this equation")
             return
         open_latex(latex)
+
+    def print_latex(self):
+        latex = self.to_latex()
+        sympy.init_printing(use_unicode=True)
+        expr = sympy.sympify(latex, evaluate=False)
+        sympy.pprint(expr)
 
     def is_latex_only(self):
         return hasattr(self, "latex_only")

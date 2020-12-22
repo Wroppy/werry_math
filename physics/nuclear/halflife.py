@@ -23,16 +23,6 @@ class Halflife(Formula):
                     Symbol("N")
                 )
         )
-        # return Equal(
-        #     Symbol("t_{1/2}"),
-        #     Multiplication(
-        #         Symbol("t"),
-        #         Division(
-        #             NaturalLogarithm(Number(2)),
-        #             NaturalLogarithm(Division(Symbol("N_{0}"), Symbol("N")))
-        #         )
-        #     )
-        # )
 
 
 if __name__ == '__main__':
