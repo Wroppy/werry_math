@@ -1,0 +1,3 @@
+cdir is the path to script directory
+used to scan available python modules
+default to the executable path

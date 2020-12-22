@@ -51,3 +51,6 @@ class TreeNode(ABC):
         get_root: returns the root node of the tree
         """
         pass
+
+    def is_selectable(self) -> bool:
+        return False

@@ -1,0 +1,4 @@
+lvl indicates the application logging level
+used to filter debug messages to a certain level
+default to warning
+available values - debug | info | warning | error

@@ -1,5 +1,7 @@
 from typing import Union, List, Tuple, Optional
 
+from cli.helpable import Helpable
+
 
 class EmptyFlagException(Exception):
     """
@@ -61,32 +63,44 @@ class CLIParser:
     """
     args: List[str]
     flags: List[CLIParserFlag]
+    helpable: Optional[Helpable]
     separator = '='
 
-    def __init__(self, args: List[str]):
+    def __init__(self, args: List[str], helpable: Helpable = None):
         self.args = args
         self.flags = []
-        self.ignored_modules = []
+        self.helpable = helpable
 
-    def parse(self, ignored_modules=None) -> List[CLIParserFlag]:
+    def parse(self) -> List[CLIParserFlag]:
         """
         Parses its arguments
         :return: A list of parser flags
         """
-        if ignored_modules is None:
-            ignored_modules = []
 
-        if len(self.flags) > 0 and ignored_modules == self.ignored_modules:
+        if len(self.flags) > 0:
             return self.flags
 
         self.flags = []
-        self.ignored_modules.extend(ignored_modules)
         for arg in self.args:
             if CLIParser.separator in arg:
                 k, v = arg.split(CLIParser.separator)
                 self.add_flag(CLIParserFlag(k, v))
             else:
                 self.add_flag(CLIParserFlag(arg))
+
+        if self.helpable is not None:
+            if self.contains(self.helpable.help_key)[1]:
+                message = []
+                for flag in self.flags:
+                    if flag.key == self.helpable.help_key:
+                        continue
+                    message.append(f'[{flag.key}]' + ':\n' + self.helpable.help_for(flag.key))
+                print('displaying help message')
+                if len(message) == 0:
+                    print(self.helpable.help())
+                else:
+                    print('\n'.join(message))
+                quit(0)
         return self.flags
 
     def add_flag(self, flag: CLIParserFlag):
@@ -111,6 +125,11 @@ class CLIParser:
         """
         return len(self.args) == 0
 
+    def is_ignored(self, key: str) -> bool:
+        if self.helpable is None:
+            return False
+        return self.helpable.contains_key(key)
+
     def modules(self) -> List[str]:
         """
         Gets the list of modules
@@ -118,7 +137,7 @@ class CLIParser:
         """
         modules = []
         for flag in self.flags:
-            if flag.key in self.ignored_modules:
+            if self.is_ignored(flag.key):
                 continue
             modules.append(flag.to_module_str())
         return modules
@@ -126,7 +145,7 @@ class CLIParser:
     def imports(self) -> List[str]:
         imports = []
         for flag in self.flags:
-            if flag.key in self.ignored_modules:
+            if self.is_ignored(flag.key):
                 continue
             imports.append(flag.to_import_str())
         return imports

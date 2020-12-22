@@ -107,6 +107,8 @@ class Variable(TreeNode, ABC):
         """
         pass
 
+    def is_selectable(self) -> bool:
+        return True
 
 class Function(Variable):
     def __init__(self, parent: TreeNode, name: str, fn: Any, method: bool = False, inherited: str = None):

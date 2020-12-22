@@ -1,0 +1,3 @@
+spath is the path of the bundle saving path
+used to specify where to save/load the program bundle and the filename
+default to the executable path + 'commands'
