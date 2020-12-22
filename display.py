@@ -21,7 +21,6 @@ from gui.resource_manager import ResourceManager
 from gui.terminal.terminal_emulator import TerminalEmulator, TerminalStatus
 
 
-
 class Display(QMainWindow):
     """
     The Display class handles displaying the gui
@@ -34,10 +33,6 @@ class Display(QMainWindow):
     # parser----------------
     # CLIParser ignored flags
     ignoredModules = ["cdir", "spath"]
-    # used to represent the current script directory
-    cdir: str
-    # used to represent the history bundle save path
-    spath: str
 
     # ----------------
 
@@ -56,10 +51,10 @@ class Display(QMainWindow):
         self.setWindowIcon(icon)
 
         # set current dir
-        self.cdir = config.value_or_default('cdir', lambda:os.path.dirname(os.path.realpath(__file__)))
-
+        config.value_or_default('cdir', lambda: os.path.dirname(os.path.realpath(__file__)))
         # set save dir
-        self.spath = config.value_or_default('spath', lambda: os.path.join(os.path.dirname(os.path.realpath(__file__)), 'commands'))
+        config.value_or_default('spath', lambda: os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                                                           'commands'))
 
         # setup console and status
         self.console = TerminalEmulator("Started Python Interpreter", config.imports())
@@ -94,10 +89,10 @@ class Display(QMainWindow):
         bundle.dump(self.spath)
 
     def load(self) -> Optional[DisplayBundle]:
-        return DisplayBundle.load(self.spath)
+        return DisplayBundle.load(self.config.value('spath'))
 
     def attempt_load(self, bundle):
-        reply = QMessageBox.question(self, 'Message', f'Load bundle from {self.spath}{DisplayBundle.ext}?',
+        reply = QMessageBox.question(self, 'Message', f'Load bundle from {self.config.value("spath")}{DisplayBundle.ext}?',
                                      QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.No:
             return
@@ -106,7 +101,7 @@ class Display(QMainWindow):
         self.console.executeCommands(history)
 
     def attempt_save(self):
-        reply = QMessageBox.question(self, 'Message', f'Save bundle to {self.spath}{DisplayBundle.ext}?',
+        reply = QMessageBox.question(self, 'Message', f'Save bundle to {self.config.value("spath")}{DisplayBundle.ext}?',
                                      QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.save()
@@ -157,10 +152,8 @@ class Display(QMainWindow):
         # dock.setWidget(label)
         # self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
-
     def setupLeftDock(self):
         pass
-
 
 
 def pre_app():
@@ -189,6 +182,13 @@ def pre_app():
         MessageHandler().emit(f"found python with: {python_path}", MessageLevel.DEBUG)
     else:
         MessageHandler().emit(f"unable to import python on current platform {sys.platform}")
+
+    # TODO include base zip
+    if os.path.exists('pythonlib.zip'):
+        MessageHandler().emit(f"found pythonlib.zip", MessageLevel.DEBUG)
+        sys.path.insert(0, os.path.join(currentDir))
+        sys.path.insert(0, os.path.join(currentDir, 'python38.zip'))
+
 
     if len(pythonlib_paths) != 0:
         for path in pythonlib_paths:

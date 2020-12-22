@@ -13,8 +13,8 @@ def get_classes_from_file(name: str, path: str) -> List[object]:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         classes = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isclass)))
-    except:
-        raise ImportException
+    except Exception as e:
+        raise ImportException(repr(e))
     return classes
 
 
@@ -24,6 +24,6 @@ def get_functions_from_file(name: str, path: str) -> List[object]:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         methods = list(filter(lambda m: not m[0].startswith("__"), inspect.getmembers(module, inspect.isfunction)))
-    except:
-        raise ImportException
+    except Exception as e:
+        raise ImportException(repr(e))
     return methods

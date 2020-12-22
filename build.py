@@ -27,7 +27,7 @@ sep = ":"
 if sys.platform == "win32":
     sep = ";"
 
-math_modules = ['chemistry', 'mathmatics', 'physics', 'utilities', 'libraries']
+math_modules = ['chemistry', 'mathmatics', 'physics', 'utilities', 'libraries', 'pythonlib.zip']
 target_folder = 'release'
 target_path = os.path.abspath(target_folder)
 script_path = os.path.dirname(os.path.realpath(__file__))

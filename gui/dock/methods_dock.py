@@ -22,7 +22,7 @@ class MethodsDock(BaseDock):
 
     def setup(self):
         # setup tree
-        moduleTree = ModuleTree(self.display.cdir)
+        moduleTree = ModuleTree(self.display.config.value('cdir'))
         moduleTree.parse()
 
         self.methodsTreeFilterModel = CustomFilterModel(parent=self.methodsTreeView)

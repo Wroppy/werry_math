@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, Set
 from PyQt5.QtWidgets import *
 
+
 # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
 def add_method_to(cls):
     def decorator(func):

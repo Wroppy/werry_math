@@ -13,7 +13,8 @@ class ResourceManager:
     default_resource_folder = {
         "font": "fonts",
         "icon": "icons",
-        "style": "styles"
+        "style": "styles",
+        "help": 'helps'
     }
 
     def __init__(self):
@@ -67,7 +68,6 @@ class ResourceManager:
         for old, new in args:
             css = css.replace(old, f"url({new})")
         return css
-
 
 if __name__ == '__main__':
     print(ResourceManager.get_resource_location("font", "consolas.ttf"))
