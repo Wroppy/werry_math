@@ -1,3 +1,4 @@
+import sys
 from typing import Union, List, Tuple, Optional
 
 from cli.helpable import Helpable
@@ -100,7 +101,7 @@ class CLIParser:
                     print(self.helpable.help())
                 else:
                     print('\n'.join(message))
-                quit(0)
+                sys.exit(0)
         return self.flags
 
     def add_flag(self, flag: CLIParserFlag):

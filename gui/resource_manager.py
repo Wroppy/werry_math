@@ -14,7 +14,8 @@ class ResourceManager:
         "font": "fonts",
         "icon": "icons",
         "style": "styles",
-        "help": 'helps'
+        "help": 'helps',
+        "image": 'imgs',
     }
 
     def __init__(self):

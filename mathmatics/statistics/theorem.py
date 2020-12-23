@@ -9,7 +9,6 @@ import numpy as np
 from utilities.markers import Proxy
 
 
-@Proxy.runInMainThread
 def central_limit_theorem(dist: Union[Dist, int], s: int, times: int):
     """
     Graphs the central limit theorem
@@ -18,10 +17,6 @@ def central_limit_theorem(dist: Union[Dist, int], s: int, times: int):
     :param times: Number of times to sample the data
     :return:
     """
-    import matplotlib.pyplot as plt
-    from matplotlib import colors
-    from matplotlib.ticker import PercentFormatter
-
     if isinstance(dist, int):
         dist = [range(dist), rand_list(dist)]
 
@@ -51,21 +46,27 @@ def central_limit_theorem(dist: Union[Dist, int], s: int, times: int):
     print(f"sdsm skew: {skew(sample_means)}")
     print(f"sdsm kurtosis: {kurtosis(sample_means)}")
 
-    bins = calc_bins(-0.5 + min(dist[0]), max(dist[0]) + 0.5, 1)
+    @Proxy.runInMainThread
+    def graph():
+        import matplotlib.pyplot as plt
+        from matplotlib import colors
+        from matplotlib.ticker import PercentFormatter
+        # https://matplotlib.org/3.3.0/gallery/statistics/hist.html#updating-histogram-colors
+        bins = calc_bins(-0.5 + min(dist[0]), max(dist[0]) + 0.5, 1)
+        fig, axs = plt.subplots(1, 2, tight_layout=True)
+        N, bins, patches = axs[0].hist(sample_means, bins=bins)
+        fracs = N / s
+        norm = colors.Normalize(fracs.min(), fracs.max())
+        for thisfrac, thispatch in zip(fracs, patches):
+            color = plt.cm.viridis(norm(thisfrac))
+            thispatch.set_facecolor(color)
 
-    # https://matplotlib.org/3.3.0/gallery/statistics/hist.html#updating-histogram-colors
-    fig, axs = plt.subplots(1, 2, tight_layout=True)
-    N, bins, patches = axs[0].hist(sample_means, bins=bins)
-    fracs = N / s
-    norm = colors.Normalize(fracs.min(), fracs.max())
-    for thisfrac, thispatch in zip(fracs, patches):
-        color = plt.cm.viridis(norm(thisfrac))
-        thispatch.set_facecolor(color)
+        axs[1].plot(dist[0], dist[1])
+        axs[1].yaxis.set_major_formatter(PercentFormatter(xmax=1))
+        fig.suptitle("Sampling distribution of the sample mean")
+        plt.show()
 
-    axs[1].plot(dist[0], dist[1])
-    axs[1].yaxis.set_major_formatter(PercentFormatter(xmax=1))
-    fig.suptitle("Sampling distribution of the sample mean")
-    plt.show()
+    graph()
 
 
 def sample_dist(p_mean: float, p_std: float, s_size: int):
@@ -74,7 +75,6 @@ def sample_dist(p_mean: float, p_std: float, s_size: int):
     print(f"sdsm mean: {s_mean}")
     print(f"sdsm std: {s_std}")
     mpl_graph_fn(NormalDist(s_mean, s_std).pdf, 0, 1, dx=0.001)
-
 
 
 if __name__ == '__main__':

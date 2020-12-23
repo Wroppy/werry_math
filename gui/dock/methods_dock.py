@@ -7,6 +7,7 @@ from gui.custom_items.custom_models import CustomFilterModel
 from gui.custom_items.custom_widgets import CustomTree
 from gui.dock.base_dock import BaseDock
 from gui.file_walker.module_tree import ModuleTree
+from gui.splash_screen import SplashScreen
 
 
 class MethodsDock(BaseDock):
@@ -21,6 +22,7 @@ class MethodsDock(BaseDock):
         self.setup()
 
     def setup(self):
+        SplashScreen().displayMessage("parsing module trees")
         # setup tree
         moduleTree = ModuleTree(self.display.config.value('cdir'))
         moduleTree.parse()

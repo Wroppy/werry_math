@@ -1,7 +1,6 @@
 import math
 import operator
 import random
-import urllib.request
 from statistics import NormalDist
 from typing import Union, List, Set, Tuple, Optional
 

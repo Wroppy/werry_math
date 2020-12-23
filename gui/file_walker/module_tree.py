@@ -14,6 +14,7 @@ from gui.common import type_to_str, add_method_to
 from gui.file_walker.file_handle import get_classes_from_file, ImportException, get_functions_from_file
 from gui.file_walker.tree_node import TreeNode, CustomStandardItem
 from gui.message_handler import MessageHandler, MessageLevel
+from gui.splash_screen import SplashScreen
 
 
 class ModuleTree(TreeNode):
@@ -35,7 +36,12 @@ class ModuleTree(TreeNode):
         self.path = path
 
     def parse(self):
-        for folder in next(os.walk(self.path))[1]:
+        folders = next(os.walk(self.path))[1]
+        folders_len = len(folders)
+        i = 0
+        for folder in folders:
+            i += 1
+            SplashScreen().displayMessage(f"parsing module {i}/{folders_len}")
             if folder in ModuleTree.ignored_folders:
                 continue
             package = Package(self, folder)
@@ -109,6 +115,7 @@ class Variable(TreeNode, ABC):
 
     def is_selectable(self) -> bool:
         return True
+
 
 class Function(Variable):
     def __init__(self, parent: TreeNode, name: str, fn: Any, method: bool = False, inherited: str = None):
