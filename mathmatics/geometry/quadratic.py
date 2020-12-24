@@ -11,4 +11,4 @@ def solve_quadratic(a: int, b: int, c: int) -> Vector2D:
 
 
 if __name__ == '__main__':
-    print(solve_quadratic(1, 4, 3).x)
+    print(solve_quadratic(1, 3, 2))

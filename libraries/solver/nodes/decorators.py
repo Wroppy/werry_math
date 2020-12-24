@@ -1,10 +1,9 @@
-from typing import List
+from typing import List, Tuple
 
 from libraries.solver.common import add_brackets
 from libraries.solver.nodes import Decorator, Node, String
 
 
-# TODO: Add a solver for this
 class Sub(Decorator):
     def __init__(self, node: Node, anno: String):
         super().__init__(node)
@@ -27,3 +26,14 @@ class Map(Decorator):
 
     def to_latex(self) -> str:
         return f"{self.node.to_latex()}({[f'{param.to_latex()} ' for param in self.parameters]})"
+
+
+class Bracket(Decorator):
+    def __init__(self, node: Node):
+        super().__init__(node)
+
+    def eval(self) -> float:
+        return self.node.eval()
+
+    def to_latex(self) -> str:
+        return f"({self.node.to_latex()})"

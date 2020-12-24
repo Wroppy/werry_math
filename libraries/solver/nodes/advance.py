@@ -31,7 +31,7 @@ class Root(AdvanceOperations):
     precedence = 2
 
     def eval(self) -> float:
-        return self.left.eval() ** (1 / self.right.eval())
+        return self.right.eval() ** (1 / self.left.eval())
 
     def to_latex(self) -> str:
         left = self.left.to_latex()
@@ -47,8 +47,6 @@ class SquareRoot(Root):
         super().__init__(Number(2), right)
 
     def to_latex(self) -> str:
-        left = self.left.to_latex()
-        left = add_square(left)
         right = self.right.to_latex()
         right = add_brackets(right)
 

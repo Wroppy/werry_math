@@ -95,7 +95,7 @@ class Display(QMainWindow):
 
     def save(self):
         bundle = self.to_display_bundle()
-        bundle.dump(self.spath)
+        bundle.dump(self.config.value('spath'))
 
     def load(self) -> Optional[DisplayBundle]:
         return DisplayBundle.load(self.config.value('spath'))

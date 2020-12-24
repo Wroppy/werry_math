@@ -275,7 +275,7 @@ class Module(TreeNode):
             classes = Class.match(self, name)
             self.nodes.extend(classes)
         except ImportException as e:
-            MessageHandler().emit(f"unable to import python module: {self.name} {repr(e)}", MessageLevel.WARNING)
+            MessageHandler().emit(f"unable to import python module: {self.path} {e}", MessageLevel.WARNING)
             self.has_error = True
 
     def to_model(self) -> CustomStandardItem:

@@ -1,5 +1,5 @@
 from chemistry.constants import R
-from libraries.solver.nodes.extension import *
+from libraries.solver.nodes import *
 from libraries.structures.formula import Formula
 
 

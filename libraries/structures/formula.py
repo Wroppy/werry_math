@@ -1,15 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Tuple, Callable, Any, Union, Optional
+from typing import List, Dict, Tuple, Callable, Any, Union, Optional, Set
 
-from libraries.solver.nodes import Equal
+from libraries.solver.nodes import Equal, Symbol
 from libraries.solver.solver import Solver
 from utilities.latex import open_latex
 import sympy
-
+import unicodeit
 
 class LatexOnlyFormula(Exception):
     def __init__(self):
         super(LatexOnlyFormula, self).__init__("cannot solve for latex only formulas")
+
+class SymbolNotFound(Exception):
+    pass
 
 
 def format_type(ty: type) -> str:
@@ -23,10 +26,32 @@ def format_type(ty: type) -> str:
 class Formula(ABC):
     description: Dict[str, Union[str, Tuple[str, type]]]
     latex_only: bool
+    symbols: Set[str]
+    __symbols: Set[Symbol]
+
+    def __init__(self):
+        self.__symbols = set()
+        if hasattr(self, 'symbols'):
+            for key in self.symbols:
+                self.__symbols.add(Symbol(key))
+        # here to assert it wont crash
+        self.to_node()
 
     @abstractmethod
     def to_node(self) -> Equal:
         pass
+
+    def s(self, key: str) -> Symbol:
+        """
+        Finds the symbol 'key' in this formula
+
+        :param key: The symbol to find
+        :return: The Symbol Node
+        """
+        for sym in self.__symbols:
+            if sym.symbol == key:
+                return sym
+        raise SymbolNotFound(f"symbol '{key}' does not exist in {self.symbols}")
 
     def explain(self):
         name = self.__class__.__name__
@@ -54,6 +79,8 @@ class Formula(ABC):
             symbols = []
             for symbol in self.description:
                 data = self.description[symbol]
+                # TODO: decide what to do with this
+                symbol = unicodeit.replace(symbol)
                 padded_symbol = symbol + ' ' * (max_symbol_length - len(symbol))
                 message = f"{padded_symbol}: "
                 if isinstance(data, str):

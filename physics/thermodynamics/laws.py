@@ -1,5 +1,4 @@
 from libraries.solver.nodes import *
-from libraries.solver.nodes.extension import *
 from libraries.structures.formula import Formula
 
 

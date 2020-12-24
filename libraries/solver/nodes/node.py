@@ -174,6 +174,7 @@ class Operation(Node, ABC):
 
 class Decorator(Node, ABC):
     node: Node
+    ignorable: bool = True
 
     def __init__(self, node: Node):
         super(Decorator, self).__init__()

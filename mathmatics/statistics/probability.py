@@ -1,6 +1,4 @@
-from typing import Tuple
-
-from libraries.solver.nodes.extension import *
+from libraries.solver.nodes import *
 from libraries.structures.formula import Formula
 from mathmatics.calculus.common import sigma
 from mathmatics.statistics.common import choose, ztable

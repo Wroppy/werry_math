@@ -2,6 +2,7 @@ from abc import ABC
 
 from libraries.solver.common import add_paren, add_brackets
 from libraries.solver.nodes import Operation, Symbol
+import numpy as np
 
 
 class BasicOperations(Operation, ABC):
@@ -68,3 +69,14 @@ class Subtraction(BasicOperations):
 
     def eval(self) -> float:
         return self.left.eval() - self.right.eval()
+
+
+class PlusMinus(BasicOperations):
+    precedence = 0
+    operator = r' \pm '
+
+    def eval(self) -> np.ndarray:
+        left = self.left.eval()
+        right = self.right.eval()
+        return np.array([left - right, left + right])
+

@@ -3,6 +3,7 @@ from typing import Tuple
 
 from libraries.solver.nodes import *
 from libraries.solver.common import *
+from libraries.solver.nodes.unary import UnaryOperations, Neg
 
 
 class Plugin(ABC):
@@ -18,7 +19,7 @@ class Plugin(ABC):
 class DecoratorPlugin(Plugin):
 
     def match(self, symbol_side: Node) -> bool:
-        return isinstance(symbol_side, Decorator)
+        return isinstance(symbol_side, Decorator) and symbol_side.ignorable
 
     def balance(self, symbol: str, symbol_side: Node, other_side: Node) -> Tuple[Node, Node]:
         operation: Decorator = symbol_side
@@ -52,7 +53,7 @@ class BasicPlugin(Plugin):
             else:
                 new_symbol_side = operation.right
                 new_other_side = Division(operation.left, other_side)
-        elif isinstance(operation, Addition):
+        elif isinstance(operation, Addition) or isinstance(operation, PlusMinus):
             if symbol_side == LEFT_SIDE:
                 new_symbol_side = operation.left
                 new_other_side = Subtraction(other_side, operation.right)
@@ -68,6 +69,24 @@ class BasicPlugin(Plugin):
                 new_other_side = Subtraction(operation.left, other_side)
 
         return new_symbol_side, new_other_side
+
+
+class UnaryPlugin(Plugin):
+    def match(self, symbol_side: Node) -> bool:
+        return isinstance(symbol_side, UnaryOperations)
+
+    def balance(self, symbol: str, symbol_side: Node, other_side: Node) -> Tuple[Node, Node]:
+        operation: UnaryOperations = symbol_side
+
+        new_symbol_side = None
+        new_other_side = None
+
+        if isinstance(operation, Neg):
+            new_other_side = Neg(other_side)
+            new_symbol_side = operation.left
+
+        return new_symbol_side, new_other_side
+
 
 
 class AdvancePlugin(Plugin):

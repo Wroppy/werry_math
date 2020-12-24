@@ -1,6 +1,8 @@
 from statistics import NormalDist
 from typing import List, Union
 
+from libraries.solver.nodes.extension import *
+from libraries.structures.formula import Formula
 from mathmatics.statistics.common import Dist, to_distf, rand, mean, rand_list, weighted_mean, \
     weighted_standard_deviation, standard_deviation, skew, kurtosis
 from utilities.graphing import mpl_graph, calc_bins, mpl_graph_fn
@@ -77,5 +79,30 @@ def sample_dist(p_mean: float, p_std: float, s_size: int):
     mpl_graph_fn(NormalDist(s_mean, s_std).pdf, 0, 1, dx=0.001)
 
 
+class TInterval(Formula):
+    """
+    The formula for the confidence interval for difference of means
+    """
+    description = {
+        "[lower, upper]": 'The lower and upper bound for the confidence interval',
+        r"\bar{x}_1": 'The sample mean of the first sample',
+        r"\bar{x}_2": 'The sample mean of the second sample',
+        r"t^\star": 'The critical t value',
+        r"\sigma_{\bar{x}_1-\bar{x}_2}": 'The standard deviation of the sampling distribution of difference of sample means'
+    }
+
+    def to_node(self) -> Equal:
+        return Symbol("[lower, upper]") == PlusMinus(
+            Bracket(Symbol(r"\bar{x}_1") - Symbol(r"\bar{x}_2")),
+            Symbol(r"t^{\star}") * Symbol(r"\sigma_{\bar{x}_1-\bar{x}_2}")
+        )
+
+
 if __name__ == '__main__':
-    sample_dist(0.56, 0.2, 100)
+    fo = TInterval()
+    print(fo.solvewhere({
+        r"\bar{x}_1": 38.9,
+        r"\bar{x}_2": 38.3,
+        r"t^\star": 1.74,
+        r"\sigma_{\bar{x}_1-\bar{x}_2}": 0.869
+    }))
