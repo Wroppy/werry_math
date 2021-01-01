@@ -1,10 +1,18 @@
 # this file is for repl helper functions, may make this run on start #
+import os
+import sys
+
+from PyQt5.QtWidgets import QApplication
+
+from utilities.markers import Proxy
+
+
 def describe(func):
-    print(f"""{'-'*20}
+    print(f"""{'-' * 20}
 description for {func.__name__}
 doc: {func.__doc__}
 params types: {func.__annotations__}
-{'-'*20}""")
+{'-' * 20}""")
 
 
 def test_modules():
@@ -37,6 +45,14 @@ def test_modules():
     from mathmatics.abstract.chaos import LogisticMap
     LogisticMap(3.1, 0.2).graph_r()
     input("enter to exit: ")
+
+
+@Proxy.runInMainThread
+def restart():
+    from gui.exeception_hook import ExceptionHooks
+    ExceptionHooks().throw_exception()
+    os.execv(sys.argv[0], sys.argv)
+
 
 
 if __name__ == '__main__':

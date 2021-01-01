@@ -252,7 +252,7 @@ class TerminalEmulator(QTextEdit):
         if display == '>>> ':
             is_prompt = True
             display = TerminalEmulator.prompt
-            self.localsChanged.emit((variables))
+            self.localsChanged.emit(variables)
         self.writeText(display, Qt.blue)
         if is_prompt:
             if len(self.saved_line) != 0:

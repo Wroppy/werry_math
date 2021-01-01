@@ -7,9 +7,11 @@ from utilities.latex import open_latex
 import sympy
 import unicodeit
 
+
 class LatexOnlyFormula(Exception):
     def __init__(self):
         super(LatexOnlyFormula, self).__init__("cannot solve for latex only formulas")
+
 
 class SymbolNotFound(Exception):
     pass
@@ -26,14 +28,19 @@ def format_type(ty: type) -> str:
 class Formula(ABC):
     description: Dict[str, Union[str, Tuple[str, type]]]
     latex_only: bool
-    symbols: Set[str]
-    __symbols: Set[Symbol]
+    symbols: List[str]
+    __symbols: List[Symbol]
 
     def __init__(self):
-        self.__symbols = set()
+        self.__symbols = []
+
         if hasattr(self, 'symbols'):
+            self.description = {}
             for key in self.symbols:
-                self.__symbols.add(Symbol(key))
+                self.description[key] = key
+        if hasattr(self, 'description'):
+            for key in self.description:
+                self.__symbols.append(Symbol(key))
         # here to assert it wont crash
         self.to_node()
 
@@ -53,7 +60,7 @@ class Formula(ABC):
                 return sym
         raise SymbolNotFound(f"symbol '{key}' does not exist in {self.symbols}")
 
-    def explain(self):
+    def explain(self, unicode: bool = False):
         name = self.__class__.__name__
 
         doc = self.__doc__
@@ -79,8 +86,8 @@ class Formula(ABC):
             symbols = []
             for symbol in self.description:
                 data = self.description[symbol]
-                # TODO: decide what to do with this
-                symbol = unicodeit.replace(symbol)
+                if unicode:
+                    symbol = unicodeit.replace(symbol)
                 padded_symbol = symbol + ' ' * (max_symbol_length - len(symbol))
                 message = f"{padded_symbol}: "
                 if isinstance(data, str):
@@ -127,9 +134,15 @@ symbols:
         solver = Solver(self.to_node())
         return solver.solvewhere(symbols, **kwargs)
 
-    def solve(self):
+    def solvefor(self, symbol: str):
+        return self.solve(symbol)
+
+    def solve(self, symbol: str = None):
+        print(f"Solving for '{self.__class__.__name__}'")
         args = {}
         for key in self.description:
+            if key == symbol:
+                continue
             desc = self.description[key]
             result = input(f"{key}: ")
             if len(result) == 0:
@@ -140,6 +153,7 @@ symbols:
                 pass
             args[key] = result
         return self.solvewhere(symbols=args)
+
 
 if __name__ == '__main__':
     pass

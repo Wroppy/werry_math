@@ -1,7 +1,7 @@
 from statistics import NormalDist
 from typing import List, Union
 
-from libraries.solver.nodes.extension import *
+from libraries.solver.nodes import *
 from libraries.structures.formula import Formula
 from mathmatics.statistics.common import Dist, to_distf, rand, mean, rand_list, weighted_mean, \
     weighted_standard_deviation, standard_deviation, skew, kurtosis
@@ -98,11 +98,53 @@ class TInterval(Formula):
         )
 
 
+class BayesTheoremWords(Formula):
+    symbols = {"Posterior", "Prior", "Sensitivity", "FalsePositiveRate"}
+
+    def to_node(self) -> Equal:
+        po = "Posterior"
+        p = "Prior"
+        s = "Sensitivity"
+        f = "FalsePositiveRate"
+        return self.s(po) == self.s(p) * (
+                self.s(s) /
+                (
+                        self.s(p) * self.s(s) +
+                        (Number(1) - self.s(p)) * self.s(f)
+                )
+        )
+
+
+class BayesTheoremOdds(Formula):
+    description = {
+        "O(H|E)": "The odds of the hypothesis given the evidence",
+        "O(H)": "The odds of the hypothesis",
+        "P(E|H)": "The probability of the evidence given the hypothesis",
+        r"P(E|\negH)": "The probability of the evidence if the hypothesis is false"
+    }
+
+    def to_node(self) -> Equal:
+        return self.s("O(H|E)") == self.s("O(H)") * (self.s("P(E|H)") / self.s(r"P(E|\negH)"))
+
+
+class ChiSquared(Formula):
+    description = {
+        r"\chi^2": "The chi squared statistic",
+        "O_i": "The observed frequency for the ith variable",
+        "E_i": "The expected frequency for the ith variable",
+    }
+
+    def to_node(self) -> Equal:
+        return self.s(r"\chi^2") == Sum(((self.s("O_i") - self.s("E_i")) ** Number(2)) / self.s("E_i"))
+
+
 if __name__ == '__main__':
-    fo = TInterval()
-    print(fo.solvewhere({
-        r"\bar{x}_1": 38.9,
-        r"\bar{x}_2": 38.3,
-        r"t^\star": 1.74,
-        r"\sigma_{\bar{x}_1-\bar{x}_2}": 0.869
-    }))
+    # fo = TInterval()
+    # print(fo.solvewhere({
+    #     r"\bar{x}_1": 38.9,
+    #     r"\bar{x}_2": 38.3,
+    #     r"t^\star": 1.74,
+    #     r"\sigma_{\bar{x}_1-\bar{x}_2}": 0.869
+    # }))
+    t = BayesTheoremOdds()
+    print(t.solve())

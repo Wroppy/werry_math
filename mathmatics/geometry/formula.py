@@ -2,7 +2,7 @@ from libraries.solver.nodes import *
 from libraries.structures.formula import Formula
 
 
-class QuadraticEquation(Formula):
+class QuadraticFormula(Formula):
     symbols = {'x', 'a', 'b', 'c'}
 
     def to_node(self) -> Equal:
@@ -14,5 +14,5 @@ class QuadraticEquation(Formula):
 
 
 if __name__ == '__main__':
-    eq = QuadraticEquation()
+    eq = QuadraticFormula()
     print(eq.solvewhere(a=1, x=3, c=2))

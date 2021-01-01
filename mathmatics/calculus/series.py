@@ -1,5 +1,7 @@
 import math
-from typing import Callable
+from decimal import Decimal
+from fractions import Fraction
+from typing import Callable, Tuple
 
 from mathmatics.calculus.common import sigma
 from mathmatics.calculus.derivative import derivative_fn
@@ -92,13 +94,38 @@ def taylor_series_fn(fn: Callable, a: float, precision: int = 7) -> Callable:
     return lambda x: taylor_series(fn, x, a, precision)
 
 
+# https://codereview.stackexchange.com/questions/66450/simplify-a-fraction/66474
+def gcd(a, b):
+    """Calculate the Greatest Common Divisor of a and b.
+
+        Unless b==0, the result will have the same sign as b (so that when
+        b is divided by it, the result comes out positive).
+        """
+    while b:
+        a, b = b, a % b
+    return a
+
+
+def repeating_to_fraction(repeating: str) -> Tuple[float, float]:
+    power = Decimal(len(repeating))
+    a = Decimal(f"0.{repeating}")
+    r = Decimal(0.1) ** power
+
+    top = round(a * Decimal(10) ** power)
+    bottom = round((Decimal(1) - r) * Decimal(10) ** power)
+    cd = Decimal(gcd(top, bottom))
+    return round(Decimal(top) / cd), round(Decimal(bottom) / cd)
+
+
 if __name__ == '__main__':
-    at = 1.77 * __two_pi
-    print(taylor_sin(1.77 * __two_pi))
-    print(math.sin(1.77 * __two_pi))
-
-    print(taylor_cos(1.77 * __two_pi))
-    print(math.cos(1.77 * __two_pi))
-
-    print(taylor_series(math.cos, at, at - 0.5))
-    print(math.cos(at))
+    print(gcd(117425, 2700))
+    print(repeating_to_fraction("074"))
+    # at = 1.77 * __two_pi
+    # print(taylor_sin(1.77 * __two_pi))
+    # print(math.sin(1.77 * __two_pi))
+    #
+    # print(taylor_cos(1.77 * __two_pi))
+    # print(math.cos(1.77 * __two_pi))
+    #
+    # print(taylor_series(math.cos, at, at - 0.5))
+    # print(math.cos(at))

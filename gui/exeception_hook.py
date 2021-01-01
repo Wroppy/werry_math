@@ -21,6 +21,11 @@ class ExceptionHooks:
         self.oldhook = sys.excepthook
         sys.excepthook = self.create_hook()
 
+    def throw_exception(self):
+        MessageHandler().emit(f"unhandlable exception occurred, please check the traceback", MessageLevel.ERROR)
+        for h in self.hooks:
+            h(None, None, None)
+
     def create_hook(self):
         def hook(exec_type, exec_value, exec_trackback):
             string = "".join(traceback.format_exception(exec_type, exec_value, exec_trackback))
@@ -31,6 +36,7 @@ class ExceptionHooks:
             MessageHandler().emit(f"unhandlable exception occurred, please check the traceback", MessageLevel.ERROR)
             for h in self.hooks:
                 h(exec_type, exec_value, exec_trackback)
+
         return hook
 
     def add_hook(self, fn):

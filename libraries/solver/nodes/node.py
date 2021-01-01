@@ -66,6 +66,9 @@ class Node(ABC):
         raise NotImplementedError
         pass
 
+    def __eq__(self, other) -> bool:
+        raise NotImplementedError
+        pass
 
 class StableNode(Node, ABC):
     pass

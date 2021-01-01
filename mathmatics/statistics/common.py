@@ -5,6 +5,7 @@ from statistics import NormalDist
 from typing import Union, List, Set, Tuple, Optional
 
 import numpy as np
+import scipy
 from scipy import stats
 
 from mathmatics.calculus.common import sigma
@@ -15,6 +16,7 @@ Dist = List[List[float]]
 DistF = List[List[float]]
 
 Data = List[float]
+Table = List[List[float]]
 
 
 def to_dist(distf: DistF) -> Dist:
@@ -350,7 +352,7 @@ def ttable(t_score: float, n: int):
 
 
 def ttable_reverse(percent: float, n: int):
-    return stats.t.ppf(percent, n - 1)
+    return stats.t.ppf(percent, n)
 
 
 def tstar(percentage: float, n: int):
@@ -365,5 +367,46 @@ def confidence_interval_mean(s_mean: float, n: int, s_std: float, percent: float
     return s_mean - interval, s_mean + interval
 
 
+def chi_square_test(expected: Data, observed: Data) -> float:
+    return sigma(lambda i: (expected[i] - observed[i]) ** 2 / expected[i], 0, len(expected) - 1)
+
+
+def chi_square_table(value: float, df: int) -> float:
+    return scipy.stats.chi2.cdf(value, df)
+
+
+# [[11,  3,  8],
+#  [ 2,  9, 14],
+#  [12, 13, 28]]
+def chi_square_table_test(table: Table) -> Tuple[float, float]:
+    # get totals
+    row_totals = []
+    col_totals = []
+
+    for row in table:
+        row_totals.append(sum(row))
+
+    for col in range(len(table[0])):
+        col_totals.append(sum([row[col] for row in table]))
+
+    table_total = sum(row_totals)
+
+    # calculate expected
+    expected = []
+    for row in row_totals:
+        r = []
+        for col in col_totals:
+            r.append(row * col / table_total)
+        expected.append(r)
+
+    chi_square = 0
+    for ri, row in enumerate(table):
+        for ci, col in enumerate(row):
+            chi_square += (col - expected[ri][ci]) ** 2 / expected[ri][ci]
+
+    p_value = 1 - chi_square_table(chi_square, (len(row_totals) - 1) * (len(col_totals) - 1))
+    return chi_square, p_value
+
+
 if __name__ == '__main__':
-    print(ttable(0.9, 60))
+    print(chi_square_table_test([[11, 3, 8], [2, 9, 14], [12, 13, 28]]))
