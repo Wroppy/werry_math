@@ -36,6 +36,16 @@ class TerminalCommand(ABC):
         pass
 
 
+class LastCommand(TerminalCommand):
+    def match(self, line: str) -> bool:
+        return line == "last"
+
+    def execute(self, terminal: 'TerminalEmulator'):
+        lastLine = terminal.toPlainText().split('\n')[-3]
+        terminal.setCurrentLine(lastLine)
+
+
+
 class ClearCommand(TerminalCommand):
     def match(self, line: str) -> bool:
         return line == 'clear'
@@ -89,7 +99,7 @@ class TerminalEmulator(QTextEdit):
         self.setStyles()
 
         # setup instance variables
-        self.commands = [ClearCommand()]
+        self.commands = [ClearCommand(), LastCommand()]
         self.history = []
         self.historyIndex = 0
         self.status = TerminalStatus.waiting

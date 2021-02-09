@@ -2,7 +2,6 @@ from libraries.solver.nodes import *
 from libraries.structures.formula import Formula
 
 class SecondLaw(Formula):
-
     """
     Newton's second law of motion
     https://en.wikipedia.org/wiki/Newton%27s_laws_of_motion
@@ -19,4 +18,4 @@ class SecondLaw(Formula):
 if __name__ == '__main__':
     law = SecondLaw()
     law.explain()
-    print(law.solvewhere(F=10, m=1, a=10))
+    print(law.solvewhere(F=10, a=10))
