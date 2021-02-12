@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from utilities.markers import Marker
 
@@ -30,14 +30,54 @@ class Molecule:
         self.coefficient = coeff
 
     def contents(self):
-        retVal = {}
+        ret_val = {}
         for k, v in self.content.items():
-            retVal[k] = v * self.coefficient
+            ret_val[k] = v * self.coefficient
 
-        return retVal
+        return ret_val
+
+    @staticmethod
+    def from_str(string: str) -> Optional['Molecule']:
+        coeff = 1
+        content = {}
+
+        strlen = len(string)
+        index = 0
+
+        while index < strlen and string[index].isdigit():
+            coeff = int(string[index])
+            index += 1
+
+        if index >= strlen:
+            return None
+
+        if string[index] == '(':
+            index += 1
+            if index >= strlen:
+                return None
+
+        while index < strlen:
+            c = string[index]
+            if not (c.isalpha() and c.isupper()):
+                break
+
+            index += 1
+            while index < strlen and string[index].isalpha() and string[index].islower():
+                c += string[index]
+                index += 1
+
+            number = 0
+            while index < strlen and string[index].isdigit():
+                number = number * 10 + int(string[index])
+                index += 1
+
+            if number == 0:
+                number = 1
+            content[c] = number
+
+        return Molecule(content, coeff)
 
     def __str__(self):
-
         l = []
         for k, v in self.content.items():
             l.append(f"{k.capitalize()}{v}")
@@ -65,13 +105,14 @@ class Equation:
 
     def balance(self, index: int = 0, limit: int = 21):
         self.counter += 1
-        if index >= len(self.left) + len(self.right):
-            return False
-
+        # check even if index is out, as it might be the last balance
         if self.is_balanced():
             return True
 
-        for i in range(1, limit):
+        if index >= len(self.left) + len(self.right):
+            return False
+
+        for i in range(2, limit):
             before = [*self.left, *self.right][index].coefficient
             [*self.left, *self.right][index].coefficient = i
             if self.balance(index + 1, limit):
@@ -81,8 +122,26 @@ class Equation:
         return False
 
     @staticmethod
-    def from_str(self, string: str) -> 'Equation':
-        pass
+    def from_str(string: str) -> 'Equation':
+        left, right = string.split('=')
+        lefts = left.split('+')
+        rights = right.split('+')
+
+        left_molecules = []
+        right_molecules = []
+
+        for left in lefts:
+            result = Molecule.from_str(left)
+            if result is None:
+                raise Exception(f"cannot parse '{left}' in input")
+            left_molecules.append(result)
+        for right in rights:
+            result = Molecule.from_str(right)
+            if result is None:
+                raise Exception(f"cannot parse '{right}' in input")
+            right_molecules.append(result)
+
+        return Equation(left_molecules, right_molecules)
 
     def __str__(self):
         lefts = [str(left) for left in self.left]
@@ -91,17 +150,8 @@ class Equation:
 
 
 if __name__ == '__main__':
-    eq = Equation(
-        [
-            Molecule({"h": 2, "o": 2}),
-            Molecule({"n": 2, "h": 4}),
-        ],
-        [
-            Molecule({"n": 2}),
-            Molecule({"h": 2, "o": 1}),
-            Molecule({"o": 2}),
-        ]
-    )
+    eq = Equation.from_str("PbN2O6+NaCl=PbCl2+NaNO3")
+    print(eq)
 
     eq.balance()
 

@@ -51,6 +51,44 @@ def gcd_step(b: float, a: float) -> float:
     return abs(b)
 
 
+def gcd_identity(b: int, a: int) -> Tuple[int, int]:
+    # construct gcd
+    steps = []
+
+    sb = b
+    sa = a
+    while True:
+        q, r = divide(sb, sa)
+        steps.append({
+            "r": r,
+            "q": q,
+            "b": sb,
+            "a": a
+        })
+        if r == 0:
+            break
+
+        sb = sa
+        sa = r
+
+    # unwind stack
+    bottom = len(steps) - 2
+
+    step = steps[bottom]
+    larger = 1
+    smaller = -step['q']
+
+    for index in range(bottom - 1, -1, -1):
+        step = steps[index]
+        new_larger = smaller
+        new_smaller = larger + smaller * -step['q']
+
+        larger = new_larger
+        smaller = new_smaller
+
+    return larger, smaller
+
+
 def all_sets(alpha: int = 2):
     v_a = set()
     for a in range(alpha):
@@ -60,4 +98,7 @@ def all_sets(alpha: int = 2):
 
 
 if __name__ == '__main__':
-    print(str(all_sets()).replace('frozenset()', 'o').replace('frozenset', '').replace('(', '').replace(')', ''))
+    # print(gcd(2424, 772))
+    print(gcd(3604, 4770))
+    print(gcd_identity(3604, 4770))
+    # print(str(all_sets()).replace('frozenset()', 'o').replace('frozenset', '').replace('(', '').replace(')', ''))

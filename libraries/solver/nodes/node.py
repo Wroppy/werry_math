@@ -46,27 +46,27 @@ class Node(ABC):
         self.contains_symbol = has_symbol
         return has_symbol
 
-    def __add__(self, other):
+    def __add__(self, other) -> 'Symbol':
         raise NotImplementedError
         pass
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> 'Symbol':
         raise NotImplementedError
         pass
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> 'Symbol':
         raise NotImplementedError
         pass
 
-    def __truediv__(self, other):
+    def __truediv__(self, other) -> 'Symbol':
         raise NotImplementedError
         pass
 
-    def __pow__(self, power, modulo=None):
+    def __pow__(self, power, modulo=None) -> 'Symbol':
         raise NotImplementedError
         pass
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other) -> 'Equal':
         raise NotImplementedError
         pass
 
