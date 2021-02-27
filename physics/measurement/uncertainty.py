@@ -1,10 +1,10 @@
+from decimal import Decimal
 import math
-from cmath import log10
-from math import floor
+from typing import Union, Any
 
 from utilities.markers import Marker
 
-number = float
+number = Any
 
 
 @Marker.ignore_this
@@ -14,16 +14,23 @@ def match_or_raise(obj, type):
 
 
 class SNotation:
-    mantissa: str
+    mantissa: Decimal
 
-    def __init__(self, mantissa: str, power: int = 0, sigfig=None):
+    def __init__(self, mantissa: Union[str, Decimal], sigfig=None):
+        if not isinstance(mantissa, Decimal):
+            mantissa = Decimal(mantissa)
         self.mantissa = mantissa
-        self.power = power
+
         if sigfig is None:
-            self.sigfig = SNotation.get_sigfig(mantissa)
+            self.sigfig = SNotation.get_sigfig(str(mantissa))
         else:
             self.sigfig = sigfig
-            self.mantissa = str(SNotation.round_sigfig(float(self.mantissa), self.sigfig))
+            self.mantissa = SNotation.round_sigfig(mantissa, self.sigfig)
+
+    @staticmethod
+    def get_decimal(mantissa: str):
+        splited = mantissa.split('.')
+        return 0 if len(splited) != 2 else len(splited[1])
 
     @staticmethod
     def get_sigfig(mantissa: str) -> int:
@@ -47,24 +54,48 @@ class SNotation:
         return sigfig
 
     @staticmethod
-    def round_sigfig(x: float, n: int) -> float:
-        # TODO: Make it a bit better
+    def round_sigfig(x: Decimal, n: int) -> Decimal:
         # https://stackoverflow.com/questions/3410976/how-to-round-a-number-to-significant-figures-in-python
         return x if x == 0 else round(x, -int(math.floor(math.log10(abs(x)))) + (n - 1))
-
-    def __str__(self):
-        out = f"{self.mantissa}"
-        if self.power != 0:
-            out += f"x10^{self.power}"
-        return out
 
     def __mul__(self, other):
         match_or_raise(other, SNotation)
 
-        result = float(self.mantissa) * float(other.mantissa)
-        return SNotation(str(result), self.power + other.power, min(self.sigfig, other.sigfig))
+        return SNotation(self.mantissa * other.mantissa, min(self.sigfig, other.sigfig))
+
+    def __truediv__(self, other):
+        match_or_raise(other, SNotation)
+
+        return SNotation(self.mantissa / other.mantissa, min(self.sigfig, other.sigfig))
+
+    def __add__(self, other):
+        match_or_raise(other, SNotation)
+
+        dp = min(SNotation.get_decimal(str(self.mantissa)), SNotation.get_decimal(str(other.mantissa)))
+        result = self.mantissa + other.mantissa
+        sigfig = len(str(result).split('.')[0])+dp
+
+        return SNotation(result, sigfig)
+
+    def __sub__(self, other):
+        match_or_raise(other, SNotation)
+
+        return SNotation(self.mantissa - other.mantissa, min(self.sigfig, other.sigfig))
+
+    def __pow__(self, power, modulo=None):
+        match_or_raise(power, SNotation)
+
+        return SNotation(self.mantissa ** power.mantissa, min(self.sigfig, power.sigfig))
+
+    def __str__(self):
+        mantissa = SNotation.round_sigfig(self.mantissa, self.sigfig)
+        return str(mantissa)
+
+    def __float__(self):
+        return self.mantissa
 
 
+# This is not yet good enough, a good thought though
 class UncertainNumber:
     def __init__(self, value: number, uncertain: number):
         self.value = value
@@ -111,17 +142,21 @@ class UncertainNumber:
                                              self.relative_uncertainty() + other.relative_uncertainty())
 
     def __pow__(self, power, modulo=None):
-        if not isinstance(power, number):
+        if not isinstance(power, float):
             raise NotImplementedError
 
         return UncertainNumber.from_relative(self.value ** power, self.relative_uncertainty() * power)
 
     def __str__(self):
-        return f"{self.value} +- {self.uncertain}"
+        return f"{self.value} ± {self.uncertain}"
 
 
 if __name__ == '__main__':
-    n1 = SNotation("209.0", 0, 3)
-    n2 = SNotation("20.1", 0, 3)
-    print(n1.sigfig)
-    print((n1 * n2).sigfig)
+    n1 = SNotation("209.0", 4)
+    n2 = SNotation("20.1", 4)
+
+    u1 = UncertainNumber(SNotation("209.0"), SNotation("0.2"))
+    u2 = UncertainNumber(SNotation("12"), SNotation("2.0"))
+    print(u1 + u2)
+    # print((n1 * n2).sigfig)
+    # print((n1 * n2))

@@ -180,19 +180,26 @@ def pre_app():
 
     # add python if exists
     pythonlib_paths = []
-    if sys.platform == "win32":
-        try:
+    try:
+        if sys.platform == "win32":
             python_path = subprocess.check_output("python -c \"import sys;print(sys.path)\"", shell=True).strip()
             python_path = python_path.decode('utf-8')
             if r'Microsoft\WindowsApps' not in python_path:
                 paths = eval(python_path)
                 paths = filter(lambda x: len(x) > 0, paths)
                 pythonlib_paths.extend(paths)
+                MessageHandler().emit(f"found python with: {python_path}", MessageLevel.DEBUG)
             else:
                 MessageHandler().emit(f"found msstore python, please use another version of python", MessageLevel.DEBUG)
-            MessageHandler().emit(f"found python with: {python_path}", MessageLevel.DEBUG)
-        except Exception as e:
-            MessageHandler().emit(str(e))
+        else:
+            python_path = subprocess.check_output('python3 -c \"import sys;print(sys.path)\"', shell=True).strip()
+            python_path = python_path.decode('utf-8')
+            paths = eval(python_path)
+            paths = filter(lambda x: len(x) > 0, paths)
+            pythonlib_paths.extend(paths)
+            MessageHandler().emit(f"found python with: {paths}", MessageLevel.DEBUG)
+    except Exception as e:
+        MessageHandler().emit(str(e))
 
     if len(pythonlib_paths) == 0:
         MessageHandler().emit(f"unable to import python on current platform {sys.platform}")
@@ -201,8 +208,6 @@ def pre_app():
     if os.path.exists('pythonlib.zip'):
         MessageHandler().emit(f"found pythonlib.zip", MessageLevel.DEBUG)
         PathHandler().insert_to_path(os.path.join(currentDir, 'pythonlib.zip'))
-        # sys.path.insert(0, os.path.join(currentDir))
-        # sys.path.insert(0, os.path.join(currentDir, 'python38.zip'))
 
     # add to path
     for path in pythonlib_paths:

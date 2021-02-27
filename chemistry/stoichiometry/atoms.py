@@ -1,33 +1,86 @@
-from typing import Dict, List, Optional
+import csv
+from typing import Dict, List, Optional, Any
+from decimal import Decimal
 
-from utilities.markers import Marker
+from physics.measurement.uncertainty import SNotation
+from pathlib import Path
 
+class Atom:
+    default_path = "pt.csv"
+    csv_element = "Symbol"
+    default_resolver = {
+        "u": "AtomicMass",
+        "mass": "AtomicMass",
+        "a": lambda info: Decimal(info["NumberofProtons"]) + Decimal(info["NumberofNeutrons"]),
+        "z": "AtomicNumber",
+        "period": "Period",
+        "group": "Group",
+        "phase": ("Phase", str),
+        "type": ("Type", str),
+        "ar": "AtomicRadius",
+        "e": "Electronegativity",
+        "ion": "FirstIonization",
+        "p": "Density",
+        "mp": "MeltingPoint",
+        "bp": "BoilingPoint",
+        "ele": ("Element", str)
+    }
 
-@Marker.ignore_this
-def merge_content(d1, d2):
-    for k, v in d2.items():
-        if k in d1:
-            d1[k] += v
-        else:
-            d1[k] = v
-    return d1
+    contents: Any = None
 
+    def __init__(self, element: str, path: str = None, resolver: Dict = None):
+        if path is None:
+            self.path = Atom.default_path
+        if resolver is None:
+            self.resolver = Atom.default_resolver
 
-@Marker.ignore_this
-def is_the_same(d1, d2) -> bool:
-    for k, v in d1.items():
-        if k not in d2:
-            return False
-        if v != d2[k]:
-            return False
+        if Atom.contents is None:
+            Atom.contents = {}
+            with open(Path(__file__).parent.absolute() / self.path) as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    Atom.contents[row[Atom.csv_element].lower()] = row
+        try:
+            self.info = Atom.contents[element.lower()]
+        except IndexError:
+            raise Exception(f"No Element named '{element}' found in the database")
 
-    return True
+        # setup default attributes
+        for key, item in self.resolver.items():
+            if callable(item):
+                setattr(self, key, item(self.info))
+                continue
+
+            if isinstance(item, tuple):
+                setattr(self, key, item[1](self.info[item[0]]))
+                continue
+
+            setattr(self, key, Decimal(self.info[item]))
+
+    def select(self, attr: str):
+        return self.info[attr]
+
+    def __str__(self):
+        return self.ele
 
 
 class Molecule:
     def __init__(self, content: Dict[str, int], coeff: int = 1):
         self.content = content
         self.coefficient = coeff
+
+    def molar_mass(self):
+        mass = Decimal()
+        for key, item in self.content.items():
+            mass += Atom(key).u * item
+        return mass
+
+    def to_mols(self, grams):
+        return Decimal(grams) / self.molar_mass()
+
+    def to_grams(self, mols):
+        return Decimal(mols) * self.molar_mass()
+
 
     def contents(self):
         ret_val = {}
@@ -84,77 +137,6 @@ class Molecule:
         return f"{self.coefficient}({''.join(l)})"
 
 
-class Equation:
-    counter: int
-
-    def __init__(self, left: List[Molecule], right: List[Molecule]):
-        self.left = left
-        self.right = right
-        self.counter = 0
-
-    def is_balanced(self) -> bool:
-        left_dict = {}
-        for molecule in self.left:
-            left_dict = merge_content(left_dict, molecule.contents())
-
-        right_dict = {}
-        for molecule in self.right:
-            right_dict = merge_content(right_dict, molecule.contents())
-
-        return is_the_same(left_dict, right_dict)
-
-    def balance(self, index: int = 0, limit: int = 21):
-        self.counter += 1
-        # check even if index is out, as it might be the last balance
-        if self.is_balanced():
-            return True
-
-        if index >= len(self.left) + len(self.right):
-            return False
-
-        for i in range(2, limit):
-            before = [*self.left, *self.right][index].coefficient
-            [*self.left, *self.right][index].coefficient = i
-            if self.balance(index + 1, limit):
-                return True
-            [*self.left, *self.right][index].coefficient = before
-
-        return False
-
-    @staticmethod
-    def from_str(string: str) -> 'Equation':
-        left, right = string.split('=')
-        lefts = left.split('+')
-        rights = right.split('+')
-
-        left_molecules = []
-        right_molecules = []
-
-        for left in lefts:
-            result = Molecule.from_str(left)
-            if result is None:
-                raise Exception(f"cannot parse '{left}' in input")
-            left_molecules.append(result)
-        for right in rights:
-            result = Molecule.from_str(right)
-            if result is None:
-                raise Exception(f"cannot parse '{right}' in input")
-            right_molecules.append(result)
-
-        return Equation(left_molecules, right_molecules)
-
-    def __str__(self):
-        lefts = [str(left) for left in self.left]
-        rights = [str(right) for right in self.right]
-        return f"{' + '.join(lefts)} = {' + '.join(rights)}"
-
-
 if __name__ == '__main__':
-    eq = Equation.from_str("PbN2O6+NaCl=PbCl2+NaNO3")
-    print(eq)
-
-    eq.balance()
-
-    print(eq)
-    print(eq.is_balanced())
-    print(eq.counter)
+    water = Molecule.from_str("H2O")
+    print(SNotation(water.to_mols(12.3), 3))

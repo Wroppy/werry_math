@@ -97,8 +97,14 @@ def all_sets(alpha: int = 2):
     return v_a
 
 
+def nth(n):
+    return ((3 / 2) ** (n + 2) + 3/2 * (-1) ** (n + 2)) / ((3/2)**(n+1)+3/2 * (-1) ** (n+1)) - 1/2
+
+
 if __name__ == '__main__':
+    arr = []
+    print(nth(50))
     # print(gcd(2424, 772))
-    print(gcd(3604, 4770))
-    print(gcd_identity(3604, 4770))
+    # print(gcd(3604, 4770))
+    # print(gcd_identity(3604, 4770))
     # print(str(all_sets()).replace('frozenset()', 'o').replace('frozenset', '').replace('(', '').replace(')', ''))
