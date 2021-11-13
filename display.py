@@ -55,7 +55,10 @@ class Display(QMainWindow):
         self.setWindowIcon(icon)
 
         # set current dir
-        config.value_or_default('cdir', lambda: os.path.dirname(os.path.realpath(__file__)))
+        if os.path.isdir('scripts'):
+            config.value_or_default('cdir', lambda: 'scripts')
+        else:
+            config.value_or_default('cdir', lambda: os.path.dirname(os.path.realpath(__file__)))
         PathHandler().add_to_path(config.value('cdir'))
         # set save dir
         config.value_or_default('spath', lambda: os.path.join(os.path.dirname(os.path.realpath(__file__)),
