@@ -30,7 +30,7 @@ jobs:
           python build.py -y
       - uses: papeloto/action-zip@v1
         with:
-          files: releases/dist/WerryMath/
+          files: release/dist/WerryMath/
           dest: WerryMath.zip
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
