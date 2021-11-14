@@ -89,8 +89,8 @@ except:
     quit(1)
 
 
-yes = confirm("is upx installed?")
-if yes:
+stop = confirm("disable upx install?")
+if not stop:
     res = input("where is upx's folder located: ")
     res = r"D:\Downloads\12_2020\upx-3.96-win64\upx-3.96-win64"
     build_script.insert(-1, f"--upx-dir {res}")
