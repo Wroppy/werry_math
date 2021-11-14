@@ -28,6 +28,10 @@ jobs:
       - name: Build App
         run: |
           python build.py -y
+      - uses: papeloto/action-zip@v1
+        with:
+          files: releases/dist/WerryMath/
+          dest: WerryMath.zip
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
            repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -35,5 +39,5 @@ jobs:
            prerelease: true
            title: "Development Build"
            files: |
-             releases/dist/WerryMath/**.*
+             WerryMath.zip
 
