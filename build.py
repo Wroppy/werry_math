@@ -8,6 +8,12 @@ import sys
 
 exec('import PyInstaller')
 
+# if first argument is -y
+if sys.argv[1] == '-y':
+    auto_confirm = True
+else:
+    auto_confirm = False
+
 if sys.platform == 'win32':
     exec('import win32com')
 
@@ -17,6 +23,10 @@ def run_win_cmd(cmd):
 
 
 def confirm_or_quit(message):
+    global auto_confirm
+    if auto_confirm:
+        return
+
     while True:
         r = input(f'{message} [Y/N]: ')
         if r == 'Y':
@@ -27,6 +37,10 @@ def confirm_or_quit(message):
         print("input not Y or N")
 
 def confirm(message):
+    global auto_confirm
+    if auto_confirm:
+        return True
+
     while True:
         r = input(f'{message} [Y/N]: ')
         if r == 'Y':
