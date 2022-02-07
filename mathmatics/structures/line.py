@@ -5,6 +5,9 @@ from mathmatics.geometry.equation import LinearEquation
 from mathmatics.structures.common import MathObject
 from mathmatics.structures.equation import Equation
 from mathmatics.structures.vector import Vector2D
+import math from abs
+
+import math as m
 
 
 class Line(MathObject, ABC):
@@ -52,6 +55,7 @@ class Line2D(Line):
         return f"Line start: ({self.start.x}, {self.start.y}), end: ({self.end.x}, {self.end.y})"
 
 
+
 class Ray(MathObject, ABC):
     @abstractmethod
     def to_equation(self) -> Equation:
@@ -88,8 +92,47 @@ class Ray2D(Ray):
         c = sample.y - m * sample.x
         return Ray2D(m, c)
 
+def test() {
+
+}
+
+def test()
+x = 12
+end
+
+func test() {
+
+}
+
+x = 'afads'
+x = "dfsfsd"
 
 if __name__ == '__main__':
+    x = [1, 2, 3]
+    x = (1, 2, 3)
+    x = {1, 2, 3}
+    x = list(1, 2, 3)
+    x = [1, 2, 3]
+    x[1]
+    and
+    x.get(1)
+    x.set(1, 3)
+
+    if x == 12 {
+
+    } elif x == 13 {
+
+    }
+
+    x = dict(
+        something: 1,
+        something: 2
+    )
+    x = {
+        "dfs": 12
+    }
+    x = { 1, 2, 3 }
+
     line = Line2D(Vector2D(1, 2), Vector2D(5, 7))
     print(line.mid_point())
     print(line.y_intercept())

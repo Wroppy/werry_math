@@ -5,6 +5,7 @@ from decimal import Decimal
 from physics.measurement.uncertainty import SNotation
 from pathlib import Path
 
+
 class Atom:
     default_path = "pt.csv"
     csv_element = "Symbol"
@@ -47,18 +48,27 @@ class Atom:
 
         # setup default attributes
         for key, item in self.resolver.items():
+            ty = Decimal
             if callable(item):
-                setattr(self, key, item(self.info))
-                continue
+                ty = None
+                value = item(self.info)
+            elif isinstance(item, tuple):
+                ty = item[1]
+                value = (self.info[item[0]])
+            else:
+                value = self.info[item]
 
-            if isinstance(item, tuple):
-                setattr(self, key, item[1](self.info[item[0]]))
-                continue
-
-            setattr(self, key, Decimal(self.info[item]))
+            try:
+                if ty is not None:
+                    value = ty(value)
+                setattr(self, key, value)
+            except:
+                setattr(self, key, Decimal(0))
 
     def select(self, attr: str):
         return self.info[attr]
+
+
 
     def __str__(self):
         return self.ele
@@ -80,7 +90,6 @@ class Molecule:
 
     def to_grams(self, mols):
         return Decimal(mols) * self.molar_mass()
-
 
     def contents(self):
         ret_val = {}
@@ -138,5 +147,6 @@ class Molecule:
 
 
 if __name__ == '__main__':
+    atom = Atom("He")
     water = Molecule.from_str("H2O")
     print(SNotation(water.to_mols(12.3), 3))
