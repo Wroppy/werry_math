@@ -119,10 +119,13 @@ symbols:
         open_latex(latex)
 
     def print_latex(self):
+        from IPython.display import Math, display
         latex = self.to_latex()
         sympy.init_printing(use_unicode=True)
-        expr = sympy.sympify(latex, evaluate=False)
-        sympy.pprint(expr)
+        expr = Math(latex)
+        # expr = sympy.sympify(latex, evaluate=False)
+        display(expr)
+        # sympy.pprint(expr)
 
     def is_latex_only(self):
         return hasattr(self, "latex_only")
