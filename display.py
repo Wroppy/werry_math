@@ -296,3 +296,6 @@ if __name__ == '__main__':
     code = app.exec_()
     MessageHandler().emit(f"application finished with code {code}", MessageLevel.INFO)
     sys.exit(code)
+
+
+# TODO: make the save file a history and a copy of local variables, and no prompt but a clear button
