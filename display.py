@@ -21,6 +21,7 @@ from gui.path_handler import PathHandler
 from gui.resource_manager import ResourceManager
 from gui.splash_screen import SplashScreen
 from gui.terminal.terminal_emulator import TerminalEmulator, TerminalStatus
+from gui.titlebar import WindowWithTitlebar
 
 
 class Display(QMainWindow):
