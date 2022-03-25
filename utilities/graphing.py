@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import List, Callable, Union
 
 from utilities.markers import Proxy
 import numpy as np
@@ -12,6 +12,22 @@ def mpl() -> str:
 def calc_bins(mi: float, ma: float, width: float):
     return np.arange(mi, ma + width, width)
 
+def mpl_graph_fn2(fn: Callable, start: float, end: float, dx: float = 0.1, **kwargs):
+    xs = np.arange(start, end, dx)
+    yss = []
+    for x in xs:
+        yss.append(fn(x))
+
+    if len(yss) == 0:
+        raise Exception("no points to graph")
+
+    ys = [
+        [yss[i][j] for i in range(len(yss))]
+        for j in range(len(yss[0]))
+    ]
+
+    mpl_graph(list(xs), ys, **kwargs)
+
 
 def mpl_graph_fn(fn: Callable, start: float, end: float, dx: float = 0.1, **kwargs):
     xs = np.arange(start, end, dx)
@@ -22,7 +38,7 @@ def mpl_graph_fn(fn: Callable, start: float, end: float, dx: float = 0.1, **kwar
 
 
 @Proxy.runInMainThread
-def mpl_graph(xs: List[float], ys: List[float] = None, title: str = None, xlabel: str = 'x', ylabel: str = 'y',
+def mpl_graph(xs: List[float], ys: Union[List[float], List[List[float]]] = None, title: str = None, xlabel: str = 'x', ylabel: str = 'y',
               type: str = 'plot', **kwargs):
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
@@ -33,6 +49,9 @@ def mpl_graph(xs: List[float], ys: List[float] = None, title: str = None, xlabel
     fn = getattr(ax, type)
     if ys is None:
         fn(xs, **kwargs)
+    elif isinstance(ys, list):
+        for y in ys:
+            fn(xs, y, **kwargs)
     else:
         fn(xs, ys, **kwargs)
 
