@@ -49,7 +49,7 @@ def mpl_graph(xs: List[float], ys: Union[List[float], List[List[float]]] = None,
     fn = getattr(ax, type)
     if ys is None:
         fn(xs, **kwargs)
-    elif isinstance(ys, list):
+    elif isinstance(ys, list) and len(ys) > 0 and isinstance(ys[0], list):
         for y in ys:
             fn(xs, y, **kwargs)
     else:
