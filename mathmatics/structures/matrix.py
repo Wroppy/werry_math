@@ -1,3 +1,5 @@
+from typing import List, Any
+
 from mathmatics.structures.common import MathObject
 
 
@@ -6,10 +8,10 @@ class Matrix(MathObject):
     This is a matrix class, and i do not wish to write this myself
     """
 
-    def __init__(self, data):
+    def __init__(self, data: List[List[Any]]):
         self.data = data
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value: Any):
         if isinstance(key, int):
             self.data[key] = value
             return
