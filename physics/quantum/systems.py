@@ -97,20 +97,47 @@ class QSpin:
             self.set_state(QSpin.coords_to_state(vinv(coords)))
             return -1
 
+def matrix_mul(A, v):
+    return [vdot(A[i], v) for i in range(len(A))]
+
+def test_xyz():
+    x, y, z = [0, _inv_root2, -_inv_root2]
+    print(x ** 2 + y ** 2 + z ** 2)
+    I = 1j
+    M = [[z, x-y*I], [x+y*I, -z]]
+    A = [
+        _inv_root2 * x + _inv_root2 * y + z,
+        _inv_root2 * x - _inv_root2 * I * y
+    ]
+    print(matrix_mul(M, A))
+    print(A)
+
 
 if __name__ == '__main__':
+    test_xyz()
+
+    exit()
     spin = QSpin()
+
+
 
     # print(QSpin._spin_states['up'])
     # print(QSpin._spin_states['right'])
     # print(qmag(QSpin._spin_states['up'], QSpin._spin_states['right']))
-    print("initial state")
+    # print("initial state")
     print(spin.state_as_coords())
-    print(spin.measure_spin([1, 0, 0]))
-    print(spin.measure_spin([1, 0, 0]))
-    print(spin.measure_spin([1, 0, 0]))
-    print(spin.measure_spin([1, 0, 0]))
-    print(spin.measure_spin([1, 0, 0]))
-    print(spin.measure_spin([1, 0, 0]))
-    print("final state")
-    print(spin.state_as_coords())
+    print(spin.measure_spin([0, 1, 0]))
+    print(spin.measure_spin([0, 1, 0]))
+    print(spin.measure_spin([0, 1, 0]))
+    print(spin.measure_spin([0, 1, 0]))
+    print(spin.measure_spin([0, 1, 0]))
+
+
+    # print(spin.measure_spin([1, 0, 0]))
+    # print(spin.measure_spin([1, 0, 0]))
+    # print(spin.measure_spin([1, 0, 0]))
+    # print(spin.measure_spin([1, 0, 0]))
+    # print(spin.measure_spin([1, 0, 0]))
+    # print(spin.measure_spin([1, 0, 0]))
+    # print("final state")
+    # print(spin.state_as_coords())
