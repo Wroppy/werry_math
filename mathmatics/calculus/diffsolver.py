@@ -134,14 +134,17 @@ class RK4Method(DiffEqSolverBase):
         return out
 
 
-def summation(lst):
-    total = 0
+def _summation(lst):
+    if len(lst) > 0 and isinstance(lst[0], (int, float)):
+        return sum(lst)
+
+    total = None
     for l in lst:
-        if isinstance(total, int) and total == 0:
+        if total is None:
             total = l
         else:
             total += l
-    return total
+    return 0 if total is None else total
 
 
 class RKMethod(DiffEqSolverBase):
@@ -201,9 +204,9 @@ class RKMethod(DiffEqSolverBase):
             ks = [0] * order
             for i in range(0, order):
                 # table[i-1] because implicit zero first row
-                ks[i] = f(t + h * cs[i], y + h * summation([table[i - 1][j] * ks[j] for j in range(0, i)]))
+                ks[i] = f(t + h * cs[i], y + h * _summation([table[i - 1][j] * ks[j] for j in range(0, i)]))
 
-            y = y + h * summation([bs[i] * ks[i] for i in range(0, order)])
+            y = y + h * _summation([bs[i] * ks[i] for i in range(0, order)])
             t = t + h
 
             out.append((t, y))
@@ -225,7 +228,7 @@ if __name__ == '__main__':
     from mathmatics.calculus.integral import integral
 
     fn = lambda x: math.sqrt(max(1 - x**2, 0))
-    solver = RKMethod(step_size=0.000001, method='rk4')
+    solver = RKMethod(step_size=0.000001, method='3/8')
     # print(solver.integrate(fn, 0, 10))
     print(4 * solver.integrate(fn, 0, 1))
     # solver = EulersMethod(step_size=0.001)
