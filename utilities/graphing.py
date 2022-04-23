@@ -1,3 +1,4 @@
+import math
 from typing import List, Callable, Union
 
 from utilities.markers import Proxy
@@ -11,6 +12,7 @@ def mpl() -> str:
 
 def calc_bins(mi: float, ma: float, width: float):
     return np.arange(mi, ma + width, width)
+
 
 def mpl_graph_fn2(fn: Callable, start: float, end: float, dx: float = 0.1, **kwargs):
     xs = np.arange(start, end, dx)
@@ -38,7 +40,24 @@ def mpl_graph_fn(fn: Callable, start: float, end: float, dx: float = 0.1, **kwar
 
 
 @Proxy.runInMainThread
-def mpl_graph(xs: List[float], ys: Union[List[float], List[List[float]]] = None, title: str = None, xlabel: str = 'x', ylabel: str = 'y',
+def mpl_vector_field2(fn: Callable, x_start: float, x_end: float, x_gap: float, y_start: float, y_end: float,
+                      y_gap: float, *args, **kwargs):
+    import matplotlib.pyplot as plt
+
+    X, Y = np.meshgrid(np.linspace(x_start, x_end, math.ceil((x_end - x_start) / x_gap)),
+                       np.linspace(y_start, y_end, math.ceil((y_end - y_start) / y_gap)))
+
+    u, v = fn(X, Y)
+
+    fig, ax = plt.subplots()
+    ax.quiver(X, Y, u, v, angles='xy', scale_units='xy', scale=1, *args, **kwargs)
+    plt.show()
+
+
+
+@Proxy.runInMainThread
+def mpl_graph(xs: List[float], ys: Union[List[float], List[List[float]]] = None, title: str = None, xlabel: str = 'x',
+              ylabel: str = 'y',
               type: str = 'plot', **kwargs):
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()

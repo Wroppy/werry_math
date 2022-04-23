@@ -1,5 +1,6 @@
 import math
 from abc import ABC, abstractmethod
+import random
 from typing import Callable, Tuple
 
 import numpy as np
@@ -45,7 +46,7 @@ class DiffEqSolverBase(ABC):
         :return: A list of (time, q) pairs
         """
         if isinstance(e0, list):
-            initial = np.asarray(e0)
+            initial = np.asarray(e0, dtype='float64')
         else:
             initial = e0
 
@@ -177,7 +178,7 @@ class RKMethod(DiffEqSolverBase):
         )
     }
 
-    def __init__(self, step_size: float = 0.1, tableu: Tuple[Matrix, Tuple[float], Tuple[float]] = None,
+    def __init__(self, step_size: float = 0.01, tableu: Tuple[Matrix, Tuple[float], Tuple[float]] = None,
                  method: str = 'rk4'):
         super()
 
@@ -214,25 +215,52 @@ class RKMethod(DiffEqSolverBase):
         return out
 
 
+class MonteCarloMethod(DiffEqSolverBase):
+    def __init__(self, step: float = 0.01, samples: int = 10000):
+        self.samples = samples
+        self.step = step
+
+    def _solve(self, equation: Callable, e0, t0: float, tf: float):
+        out = []
+
+        n = self.samples
+        dt = self.step
+
+        y = e0
+        t = t0
+        out.append((t, y))
+
+        while t <= tf:
+            dy = dt / n * _summation([equation(random.random() * dt + t, y) for _ in range(n)])
+            y = y + dy
+            t = t + dt
+            out.append((t, y))
+
+        return out
+
+
 # TODO: make RKMethod with error acceptance and implicit methods
 
 def _test_dif(t, q):
     import math
-    y = q
-    # return -40 * y
-    return t * t
+    # return t * math.sqrt(abs(q)) + math.sin(t * 3.14 / 2) ** 3 - 5 * (t > 2)
+    y, dy = q
+    # return math.sin(t) - t * y
+    return -40 * y
+    # return t * t
 
 
 if __name__ == '__main__':
     from utilities.graphing import mpl_graph
     from mathmatics.calculus.integral import integral
 
-    fn = lambda x: math.sqrt(max(1 - x**2, 0))
-    solver = RKMethod(step_size=0.000001, method='3/8')
+    fn = lambda x: math.sqrt(max(1 - x ** 2, 0))
+    # solver = RKMethod(step_size=0.000001, method='3/8')
+    solver = RKMethod()
     # print(solver.integrate(fn, 0, 10))
     print(4 * solver.integrate(fn, 0, 1))
     # solver = EulersMethod(step_size=0.001)
-    # ans = solver.solve(test_dif, 0, 0, 2)
+    # ans = solver.solve(_test_dif, [1, 0], 0, 10)
     # xs = [p[0] for p in ans]
     # ys = [p[1] for p in ans]
     #
